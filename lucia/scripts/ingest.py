@@ -232,7 +232,7 @@ def embed_chunks(chunks: list[dict]) -> Optional[np.ndarray]:
         all_embeddings = []
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
-            response = client.embeddings.create(model="nvidia/NV-Embed-v2", input=batch)
+            response = client.embeddings.create(model="nvidia/NV-EmbedQA-E5-V5", input=batch)
             all_embeddings.extend([e.embedding for e in response.data])
         return np.array(all_embeddings, dtype=np.float32)
     except Exception as e:

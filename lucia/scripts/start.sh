@@ -77,19 +77,18 @@ else
     log "Started Nemotron Nano (PID: $!)"
 fi
 
-# --- NV-Embed-v2 (port 8002) — NVIDIA embeddings (SOTA, non-gated) ---
+# --- Embedding model (port 8002) — intfloat/e5-large-v2 (no token needed) ---
 if port_in_use 8002; then
-    log "SKIP: NV-Embed already running on port 8002"
+    log "SKIP: Embedding model already running on port 8002"
 else
-    log "Starting nvidia/NV-Embed-v2 on port 8002..."
+    log "Starting intfloat/e5-large-v2 on port 8002..."
     python3 -m vllm.entrypoints.openai.api_server \
-        --model nvidia/NV-Embed-v2 \
+        --model intfloat/e5-large-v2 \
         --port 8002 \
-        --gpu-memory-utilization 0.15 \
-        --trust-remote-code \
+        --gpu-memory-utilization 0.10 \
         > "$LOG_DIR/nv_embed.log" 2>&1 &
-    echo "$! NV-Embed 8002" >> "$PID_FILE"
-    log "Started NV-Embed-v2 (PID: $!)"
+    echo "$! Embed 8002" >> "$PID_FILE"
+    log "Started intfloat/e5-large-v2 (PID: $!)"
 fi
 
 # --- NeVA Vision (port 8003) — DISABLED (added to backlog) ---

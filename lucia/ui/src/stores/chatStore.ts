@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getWebSocket } from "../hooks/useWebSocket";
+import { getGlobalWs } from "../lib/wsRef";
 import type { Message, Session, AgentMode, MessageMetrics } from "../types";
 
 interface ChatState {
@@ -59,7 +59,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({ messages: [...s.messages, userMessage], isStreaming: true }));
 
     // Send over WebSocket
-    const ws = getWebSocket();
+    const ws = getGlobalWs();
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
         type: "message",

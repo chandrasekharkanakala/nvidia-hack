@@ -164,7 +164,13 @@ export const useChatStore = create<ChatState>()(
       const res = await fetch("/sessions");
       if (res.ok) {
         const data = await res.json();
-        const sessions = data.sessions || data;
+        const raw = data.sessions || data;
+        const sessions = raw.map((s: Record<string, unknown>) => ({
+          id: s.id,
+          title: s.title || "",
+          lastActivity: s.lastActivity || s.last_activity || new Date().toISOString(),
+          messageCount: s.messageCount ?? s.message_count ?? 0,
+        }));
         set({ sessions });
       }
     } catch {

@@ -147,12 +147,18 @@ else
     log "NeMo Guardrails CLI will be available after install completes"
 fi
 
-# --- NemoClaw CLI ---
+# --- NemoClaw ---
 if check_cmd nemoclaw; then
     log "SKIP: NemoClaw CLI already installed"
 else
-    log "Installing NemoClaw CLI..."
-    pip install --quiet nemoclaw 2>/dev/null || log "WARN: NemoClaw not available in PyPI, may need manual install"
+    log "Installing NemoClaw..."
+    pip install --quiet nemoclaw-installer 2>/dev/null && {
+        nemoclaw-installer --non-interactive 2>/dev/null || python3 -m nemoclaw_installer 2>/dev/null || true
+        log "DONE: NemoClaw installed"
+    } || {
+        # Fallback: direct NVIDIA bootstrap
+        curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash 2>/dev/null || log "WARN: NemoClaw install failed — install manually: pip install nemoclaw-installer"
+    }
 fi
 
 # --- NVIDIA Skills ---

@@ -11,13 +11,45 @@ from agent.prompts import SYNTHESIZER_DEEP, SYNTHESIZER_LIGHT
 logger = logging.getLogger(__name__)
 
 
+def _extract_content(data) -> str:
+    """Extract meaningful content from tool result data, stripping raw metadata."""
+    if isinstance(data, dict):
+        # Prefer summary or results fields over dumping the whole dict
+        parts = []
+        if data.get("summary"):
+            parts.append(str(data["summary"]))
+        if data.get("results"):
+            results = data["results"]
+            if isinstance(results, list):
+                for item in results[:10]:
+                    parts.append(str(item)[:200])
+            else:
+                parts.append(str(results)[:500])
+        if data.get("answer"):
+            parts.append(str(data["answer"]))
+        if data.get("content"):
+            parts.append(str(data["content"]))
+        # Fallback: if no known fields matched, use a cleaned repr
+        if not parts:
+            cleaned = {k: v for k, v in data.items() if k not in ("error", "sources") and v}
+            parts.append(str(cleaned)[:500])
+        return "\n".join(parts)
+    elif isinstance(data, list):
+        return "\n".join(str(item)[:200] for item in data[:10])
+    else:
+        return str(data)[:1000]
+
+
 def _build_context(tool_results: list[dict]) -> str:
     """Format tool results as numbered sources for citation."""
     sources = []
-    for i, r in enumerate(tool_results):
+    idx = 1
+    for r in tool_results:
         if r["success"] and r["data"] is not None:
-            data_str = str(r["data"])[:1000]
-            sources.append(f"[{i+1}] Source ({r['tool']}): {data_str}")
+            content = _extract_content(r["data"])
+            if content.strip():
+                sources.append(f"[{idx}] ({r['tool']}): {content}")
+                idx += 1
     return "\n\n".join(sources) if sources else "No tool results available."
 
 

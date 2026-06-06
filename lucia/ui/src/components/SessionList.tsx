@@ -27,11 +27,14 @@ function groupByDate(sessions: Session[]) {
 
 function formatLastActivity(iso: string) {
   const now = Date.now();
-  const ms = now - new Date(iso).getTime();
+  const parsed = new Date(iso).getTime();
+  if (isNaN(parsed)) return "recently";
+  const ms = now - parsed;
   const minute = 60000;
   const hour = 3600000;
   const day = 86400000;
 
+  if (ms < 0) return "Just now";
   if (ms < minute) return "Just now";
   if (ms < hour) return `${Math.floor(ms / minute)}m ago`;
   if (ms < day) return `${Math.floor(ms / hour)}h ago`;

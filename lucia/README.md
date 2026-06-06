@@ -56,26 +56,62 @@ ssh -L 3000:localhost:3000 -L 8000:localhost:8000 user@dgx-spark
 ## Architecture
 
 ```
-User (Browser) ←→ React UI (:3000)
-                      ↕
-              FastAPI Backend (:8000)
-                      ↕
-            NeMo Guardrails (PII, Safety, Topic)
-                      ↕
-            NemoClaw Agent Sandbox (:8080)
-              ↕           ↕           ↕
-     ┌────────┴──┐  ┌────┴────┐  ┌───┴───┐
-     │ RAG Search │  │SQL Query│  │Simulate│  ...
-     │ (FAISS GPU)│  │(DuckDB) │  │(Graph) │
-     └────────────┘  └─────────┘  └────────┘
-                      ↕
-           Models (all local on DGX Spark)
-     ┌──────────────────────────────────────┐
-     │ NemoTron Nano (35GB) — reasoning     │
-     │ Content Safety 4B (8GB) — guardrails │
-     │ NV-Embed-v2 (20GB) — embeddings     │
-     │ NeVA-7B (12GB) — vision             │
-     └──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         DGX Spark (Server)                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐    WebSocket/REST   ┌───────────────────────────────┐ │
+│  │   React UI   │◄──────────────────►│   FastAPI (port 8000)          │ │
+│  │  (port 3000) │                     │   ├─ /ws/chat (streaming)     │ │
+│  │              │                     │   ├─ /chat   (REST)           │ │
+│  │  • Chat      │                     │   ├─ /voice/stt | /voice/tts  │ │
+│  │  • Charts    │                     │   ├─ /sessions                │ │
+│  │  • Voice     │                     │   └─ /health | /metrics       │ │
+│  │  • History   │                     └──────────┬────────────────────┘ │
+│  └──────────────┘                                │                      │
+│                                                  ▼                      │
+│                                   ┌────────────────────────────┐        │
+│                                   │  NeMo Guardrails (Safety)  │        │
+│                                   │  PII · Topic · Toxicity    │        │
+│                                   └──────────────┬─────────────┘        │
+│                                                  ▼                      │
+│                                   ┌────────────────────────────┐        │
+│                                   │  NemoClaw Agent Sandbox    │        │
+│                                   │  (port 8080) Orchestration │        │
+│                                   └──────────────┬─────────────┘        │
+│                                                  ▼                      │
+│                                   ┌────────────────────────────┐        │
+│                                   │    Router (Intent Detect)   │        │
+│                                   │  Fast-path + LLM fallback  │        │
+│                                   └──────────────┬─────────────┘        │
+│                                                  │                      │
+│              ┌────────────┬──────────┬───────────┼───────────┬────────┐ │
+│              ▼            ▼          ▼           ▼           ▼        ▼ │
+│       ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌───────┐
+│       │SQL Query │ │RAG Search│ │Visualize│ │  Web   │ │Simulate│ │Predict│
+│       │ (DuckDB) │ │ (FAISS)  │ │(matplot)│ │ Search │ │(graph) │ │(stats)│
+│       └──────────┘ └──────────┘ └─────────┘ └────────┘ └────────┘ └───────┘
+│              │            │          │           │           │          │    │
+│              ▼            ▼          ▼           ▼           ▼          ▼    │
+│       ┌─────────────────────────────────────────────────────────────────┐   │
+│       │              Models (ALL local on DGX Spark)                     │   │
+│       │  ┌─────────────────────────────────────────────────────────┐    │   │
+│       │  │ :8001  NemoTron Nano (35GB) — reasoning + generation    │    │   │
+│       │  │ :8001  Content Safety 4B (8GB) — guardrails             │    │   │
+│       │  │ :8002  NV-Embed-v2 (20GB) — vector embeddings          │    │   │
+│       │  │ :8003  NeVA-7B (12GB) — vision / image analysis        │    │   │
+│       │  └─────────────────────────────────────────────────────────┘    │   │
+│       └─────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                         Data Layer                                    │   │
+│  │  • data/raw/        → CSV, XLSX, JSON, PDF, images (London datasets) │   │
+│  │  • data/processed/  → cleaned parquet / DuckDB tables                │   │
+│  │  • data/embeddings/ → FAISS vector index (GPU-accelerated)           │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+         SSH Tunnel: ssh -L 3000:localhost:3000 -L 8000:localhost:8000
 ```
 
 ---

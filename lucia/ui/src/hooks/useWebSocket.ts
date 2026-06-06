@@ -3,6 +3,12 @@ import { useChatStore } from "../stores/chatStore";
 import { useMetricsStore } from "../stores/metricsStore";
 import type { WSIncoming } from "../types";
 
+// Global reference so the store can send messages
+let globalWs: WebSocket | null = null;
+export function getWebSocket() {
+  return globalWs;
+}
+
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -15,6 +21,7 @@ export function useWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
       wsRef.current = ws;
+      globalWs = ws;
 
       ws.onopen = () => {
         console.log("[WS] Connected");
@@ -72,6 +79,7 @@ export function useWebSocket() {
 
       ws.onclose = () => {
         console.log("[WS] Disconnected, reconnecting...");
+        globalWs = null;
         reconnectTimer.current = setTimeout(connect, 3000);
       };
 
@@ -85,6 +93,7 @@ export function useWebSocket() {
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
+      globalWs = null;
     };
   }, []);
 

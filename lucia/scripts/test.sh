@@ -6,6 +6,10 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOG_DIR="$PROJECT_DIR/logs"
 mkdir -p "$LOG_DIR"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+LOGFILE="$LOG_DIR/test_${TIMESTAMP}.log"
+
+# Redirect ALL output (stdout + stderr) to logfile AND terminal
+exec > >(tee -a "$LOGFILE") 2>&1
 
 cd "$PROJECT_DIR"
 source "$PROJECT_DIR/.venv/bin/activate" 2>/dev/null || true
@@ -14,8 +18,16 @@ MODE="${1:-all}"
 FILE_PATH="${2:-}"
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "$msg"
 }
+
+log_error() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    echo "$msg" >&2
+}
+
+trap 'log_error "Command failed at line $LINENO (exit code $?): ${BASH_COMMAND}"' ERR
 
 check_services() {
     local ports=(8000 8001 8002)

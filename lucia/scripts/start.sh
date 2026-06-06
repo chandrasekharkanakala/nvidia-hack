@@ -8,10 +8,21 @@ mkdir -p "$LOG_DIR"
 LOGFILE="$LOG_DIR/start_$(date +%Y%m%d_%H%M%S).log"
 PID_FILE="$LOG_DIR/pids.txt"
 
+# Redirect ALL output (stdout + stderr) to logfile AND terminal
+exec > >(tee -a "$LOGFILE") 2>&1
+
 log() {
     local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-    echo "$msg" | tee -a "$LOGFILE"
+    echo "$msg"
 }
+
+log_error() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    echo "$msg" >&2
+}
+
+# Trap errors and log them with context
+trap 'log_error "Command failed at line $LINENO (exit code $?): ${BASH_COMMAND}"' ERR
 
 port_in_use() {
     lsof -i :"$1" &>/dev/null || ss -tlnp 2>/dev/null | grep -q ":$1 "

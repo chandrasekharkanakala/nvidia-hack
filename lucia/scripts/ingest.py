@@ -35,7 +35,7 @@ for d in [PROCESSED_DIR, EMBEDDINGS_DIR, LOG_DIR]:
 # Logging setup
 log_file = LOG_DIR / f"ingest_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="[%(asctime)s] %(levelname)s: %(message)s",
     handlers=[
         logging.FileHandler(log_file),
@@ -43,6 +43,12 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+# Capture unhandled exceptions into the log
+def _exception_handler(exc_type, exc_value, exc_tb):
+    logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+
+sys.excepthook = _exception_handler
 
 
 class RoutePath(Enum):

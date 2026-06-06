@@ -7,10 +7,21 @@ LOG_DIR="$PROJECT_DIR/logs"
 mkdir -p "$LOG_DIR"
 LOGFILE="$LOG_DIR/setup_$(date +%Y%m%d_%H%M%S).log"
 
+# Redirect ALL output (stdout + stderr) to logfile AND terminal
+exec > >(tee -a "$LOGFILE") 2>&1
+
 log() {
     local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-    echo "$msg" | tee -a "$LOGFILE"
+    echo "$msg"
 }
+
+log_error() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    echo "$msg" >&2
+}
+
+# Trap errors and log them with context
+trap 'log_error "Command failed at line $LINENO (exit code $?): ${BASH_COMMAND}"' ERR
 
 check_cmd() {
     command -v "$1" &>/dev/null
@@ -26,6 +37,15 @@ else
     log "Installing Python 3.12..."
     sudo apt-get update -qq && sudo apt-get install -y python3.12 python3.12-venv python3.12-dev python3-pip
     log "DONE: Python installed ($(python3 --version))"
+fi
+
+# --- Python dev headers (needed for native extensions like annoy) ---
+if [ -f "/usr/include/python3.12/Python.h" ] || [ -f "/usr/include/python3/Python.h" ]; then
+    log "SKIP: Python dev headers already present"
+else
+    log "Installing Python dev headers (required for nemoguardrails/annoy)..."
+    sudo apt-get install -y python3.12-dev python3-dev build-essential
+    log "DONE: Python dev headers installed"
 fi
 
 # --- Node.js 22+ ---

@@ -5,10 +5,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOG_DIR="$PROJECT_DIR/logs"
 PID_FILE="$LOG_DIR/pids.txt"
+LOGFILE="$LOG_DIR/stop_$(date +%Y%m%d_%H%M%S).log"
+
+# Redirect ALL output (stdout + stderr) to logfile AND terminal
+exec > >(tee -a "$LOGFILE") 2>&1
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "$msg"
 }
+
+log_error() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    echo "$msg" >&2
+}
+
+trap 'log_error "Command failed at line $LINENO (exit code $?): ${BASH_COMMAND}"' ERR
 
 log "=== Stopping Lucia Services ==="
 

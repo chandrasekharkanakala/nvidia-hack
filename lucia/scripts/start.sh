@@ -85,26 +85,25 @@ else
     python3 -m vllm.entrypoints.openai.api_server \
         --model nvidia/NV-Embed-v2 \
         --port 8002 \
-        --task embedding \
         --gpu-memory-utilization 0.15 \
         > "$LOG_DIR/nv_embed.log" 2>&1 &
     echo "$! NV-Embed 8002" >> "$PID_FILE"
     log "Started NV-Embed-v2 (PID: $!)"
 fi
 
-# --- NeVA Vision (port 8003) — NVIDIA vision model ---
-if port_in_use 8003; then
-    log "SKIP: NeVA already running on port 8003"
-else
-    log "Starting NeVA on port 8003..."
-    python3 -m vllm.entrypoints.openai.api_server \
-        --model nvidia/neva-22b \
-        --port 8003 \
-        --gpu-memory-utilization 0.10 \
-        > "$LOG_DIR/neva.log" 2>&1 &
-    echo "$! NeVA 8003" >> "$PID_FILE"
-    log "Started NeVA (PID: $!)"
-fi
+# --- NeVA Vision (port 8003) — DISABLED (added to backlog) ---
+# if port_in_use 8003; then
+#     log "SKIP: NeVA already running on port 8003"
+# else
+#     log "Starting NeVA on port 8003..."
+#     python3 -m vllm.entrypoints.openai.api_server \
+#         --model nvidia/neva-22b \
+#         --port 8003 \
+#         --gpu-memory-utilization 0.10 \
+#         > "$LOG_DIR/neva.log" 2>&1 &
+#     echo "$! NeVA 8003" >> "$PID_FILE"
+#     log "Started NeVA (PID: $!)"
+# fi
 
 # --- NemoClaw (port 8080) ---
 if port_in_use 8080; then
@@ -126,7 +125,7 @@ if port_in_use 8000; then
 else
     log "Starting FastAPI on port 8000..."
     cd "$PROJECT_DIR"
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 \
+    PYTHONPATH="$PROJECT_DIR" uvicorn src.api.main:app --host 0.0.0.0 --port 8000 \
         > "$LOG_DIR/fastapi.log" 2>&1 &
     echo "$! FastAPI 8000" >> "$PID_FILE"
     log "Started FastAPI (PID: $!)"
@@ -155,7 +154,7 @@ log "Waiting for services to become ready..."
 log "(vLLM models can take 3-10 minutes on first load while downloading weights)"
 wait_for_port 8001 "vLLM" 600 || true
 wait_for_port 8002 "NV-Embed" 600 || true
-wait_for_port 8003 "NeVA" 600 || true
+# wait_for_port 8003 "NeVA" 600 || true  # Vision disabled (backlog)
 wait_for_port 8080 "NemoClaw" 30 || true
 wait_for_port 8000 "FastAPI" 30 || true
 wait_for_port 3000 "React UI" 15 || true

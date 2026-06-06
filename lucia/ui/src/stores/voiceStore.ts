@@ -24,7 +24,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   isRecording: false,
   isTranscribing: false,
   isSpeaking: false,
-  isVoiceEnabled: true,
+  isVoiceEnabled: false,
   transcript: "",
   stopSpeakingHandler: null,
 

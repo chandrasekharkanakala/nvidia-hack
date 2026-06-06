@@ -37,7 +37,7 @@ export function Header() {
           {isVoiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           {isVoiceEnabled ? "Voice On" : "Voice Off"}
         </button>
-        {isSpeaking && (
+        {isVoiceEnabled && isSpeaking && (
           <button
             onClick={stopSpeaking}
             className="flex items-center gap-1.5 rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs text-[var(--color-error)] backdrop-blur-xl transition-colors hover:bg-[var(--color-surface-hover)]"

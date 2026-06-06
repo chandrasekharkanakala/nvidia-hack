@@ -107,7 +107,7 @@ PACKAGES=(
     "pyarrow:pyarrow"
     "pandas:pandas"
     "openpyxl:openpyxl"
-    "faiss-gpu:faiss"
+    "faiss-cpu:faiss"
     "numpy:numpy"
     "openai:openai"
     "aiohttp:aiohttp"

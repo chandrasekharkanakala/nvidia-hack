@@ -1,2 +1,2 @@
 # nvidia-hack
-Nvidia hackathon 
+Nvidia hackathon - 2026

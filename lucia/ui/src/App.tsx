@@ -9,14 +9,14 @@ export default function App() {
   useWebSocket();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
+    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)]">
       <Sidebar />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <Header />
         <MessageArea />
         <InputBar />
+        <MetricsPanel />
       </div>
-      <MetricsPanel />
     </div>
   );
 }

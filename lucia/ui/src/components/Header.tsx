@@ -10,18 +10,18 @@ export function Header() {
   const session = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        <span className="text-lg font-bold text-[var(--color-accent)]">LUCIA</span>
-        {session && (
-          <span className="text-sm text-[var(--color-muted)] truncate max-w-[300px]">
-            {session.title}
-          </span>
-        )}
+        <span className="rounded-full border border-[var(--color-glass-border)] bg-[var(--color-surface-hover)]/85 px-2.5 py-1 text-xs font-semibold text-[var(--color-muted)]">
+          LUCIA
+        </span>
+        <span className="text-sm font-semibold text-[var(--color-text)]">
+          {session?.title || "New conversation"}
+        </span>
       </div>
       <button
         onClick={toggle}
-        className="flex items-center gap-1.5 rounded-[var(--radius-btn)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] transition-colors"
+        className="flex items-center gap-1.5 rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)] backdrop-blur-xl transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
       >
         <BarChart3 size={14} />
         Metrics

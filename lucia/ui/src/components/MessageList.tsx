@@ -8,7 +8,7 @@ interface Props {
 
 export function MessageList({ messages }: Props) {
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-7">
       {messages.map((msg) =>
         msg.role === "user" ? (
           <UserMessage key={msg.id} message={msg} />

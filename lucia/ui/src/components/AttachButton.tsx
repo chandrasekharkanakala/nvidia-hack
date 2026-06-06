@@ -27,7 +27,7 @@ export function AttachButton({ onAttach }: Props) {
     <>
       <button
         onClick={() => inputRef.current?.click()}
-        className="flex h-8 w-8 items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-btn)] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
         title="Attach image"
       >
         <Paperclip size={16} />

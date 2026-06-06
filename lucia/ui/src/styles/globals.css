@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #0f0f0f;
-  --color-surface: #1a1a2e;
-  --color-surface-hover: #242440;
-  --color-accent: #76b900;
-  --color-accent-deep: #9333ea;
-  --color-text: #e4e4e7;
-  --color-muted: #71717a;
-  --color-border: #27272a;
-  --color-error: #ef4444;
+  --color-bg: #f7f0e4;
+  --color-surface: #fffaf2;
+  --color-surface-hover: #f2e7d6;
+  --color-accent: #8a6a44;
+  --color-accent-deep: #6f5a95;
+  --color-text: #2f2418;
+  --color-muted: #7d6e5b;
+  --color-border: #dccdb8;
+  --color-glass-surface: rgba(255, 250, 242, 0.62);
+  --color-glass-border: rgba(220, 205, 184, 0.65);
+  --color-error: #dc2626;
   --radius-card: 12px;
   --radius-btn: 8px;
+  --shadow-glass: 0 10px 30px rgba(47, 36, 24, 0.08);
 }
 
 * {
@@ -20,14 +23,43 @@
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 0% 0%, rgba(138, 106, 68, 0.1), transparent 55%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(111, 90, 149, 0.12), transparent 60%),
+    var(--color-bg);
   color: var(--color-text);
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "ss01", "cv01";
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(138, 106, 68, 0.25);
+  color: #23180f;
 }
 
 code, pre {
   font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+button,
+input,
+textarea {
+  transition: all 140ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 65%, white);
+  outline-offset: 2px;
+}
+
+.prose {
+  color: var(--color-text);
 }
 
 /* Custom scrollbar */
@@ -72,4 +104,32 @@ code, pre {
 }
 .tool-spin {
   animation: spin 1s linear infinite;
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-in {
+  animation: message-in 0.22s ease-out both;
+}
+
+@keyframes tech-roll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.tech-roll {
+  animation: tech-roll 18s linear infinite;
 }

@@ -28,8 +28,8 @@ export function VoiceButton({ onTranscript }: Props) {
       disabled={isTranscribing}
       className={`relative flex h-8 w-8 items-center justify-center rounded-[var(--radius-btn)] transition-colors ${
         isRecording
-          ? "text-[var(--color-error)]"
-          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+          ? "bg-[var(--color-error)]/10 text-[var(--color-error)]"
+          : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
       } disabled:opacity-50`}
       title="Hold to record"
     >

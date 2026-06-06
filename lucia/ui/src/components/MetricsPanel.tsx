@@ -15,12 +15,12 @@ export function MetricsPanel() {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-[var(--color-border)] bg-[var(--color-bg)]">
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+    <div className="absolute right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] shadow-[-10px_0_20px_rgba(47,36,24,0.08)] backdrop-blur-xl">
+      <div className="flex items-center justify-between border-b border-[var(--color-glass-border)] px-4 py-3">
         <span className="text-sm font-medium">Metrics</span>
         <button
           onClick={toggle}
-          className="text-[var(--color-muted)] hover:text-[var(--color-text)]"
+          className="rounded-[var(--radius-btn)] p-1 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
         >
           <X size={16} />
         </button>
@@ -56,7 +56,7 @@ export function MetricsPanel() {
               {(lastAssistant?.toolCalls || toolCalls).map((tc, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between rounded-[var(--radius-btn)] bg-[var(--color-surface)] px-3 py-1.5 text-xs"
+                  className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs backdrop-blur-xl"
                 >
                   <span className="text-[var(--color-text)]">{tc.tool}</span>
                   <span className={tc.success ? "text-[var(--color-accent)]" : "text-[var(--color-error)]"}>
@@ -74,7 +74,7 @@ export function MetricsPanel() {
 
 function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--color-surface)] p-3">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] p-3 shadow-[0_2px_8px_rgba(47,36,24,0.08)] backdrop-blur-xl">
       <div className="mb-1 flex items-center gap-2 text-xs text-[var(--color-muted)]">
         {icon}
         <span>{label}</span>

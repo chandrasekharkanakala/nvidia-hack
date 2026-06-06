@@ -9,7 +9,7 @@ export function MessageArea() {
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center overflow-hidden">
+      <div className="flex flex-1 justify-center overflow-y-auto px-6 pb-8 pt-14">
         <WelcomeScreen />
       </div>
     );
@@ -19,7 +19,7 @@ export function MessageArea() {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-4 py-6"
+      className="flex-1 overflow-y-auto px-6 py-8"
     >
       <MessageList messages={messages} />
     </div>

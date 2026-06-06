@@ -67,35 +67,32 @@ class DatasetConfig:
 
 
 # Dataset registry with routing
+# Filenames MUST match what download_data.sh saves to data/raw/
 DATASET_REGISTRY: list[DatasetConfig] = [
     # Transport (Path A - structured)
-    DatasetConfig("congestion_charge_vehicles.csv", "congestion_charge", RoutePath.A, [], "Congestion charge vehicle data"),
+    DatasetConfig("congestion_charge.csv", "congestion_charge", RoutePath.A, [], "Congestion charge vehicle data"),
     DatasetConfig("public_transport_journeys.csv", "transport_journeys", RoutePath.A, [], "Public transport journey counts"),
-    DatasetConfig("cycle_hires.csv", "cycle_hires", RoutePath.A, [], "Santander cycle hire data"),
-    DatasetConfig("road_collisions.csv", "road_collisions", RoutePath.AB, ["description", "location"], "Road collision incidents"),
+    DatasetConfig("cycle_hires.xlsx", "cycle_hires", RoutePath.A, [], "Santander cycle hire data"),
     DatasetConfig("walking_cycling_borough.csv", "walking_cycling", RoutePath.A, [], "Walking and cycling by borough"),
-    DatasetConfig("ptals_accessibility.csv", "ptals", RoutePath.A, [], "Public transport accessibility levels"),
-    # Energy & Environment (Path A/AB)
+    DatasetConfig("ptals.csv", "ptals", RoutePath.A, [], "Public transport accessibility levels"),
     DatasetConfig("road_energy_consumption.csv", "road_energy", RoutePath.A, [], "Road transport energy consumption"),
-    DatasetConfig("underground_temperatures.csv", "underground_temps", RoutePath.A, [], "Underground temperature readings"),
+    DatasetConfig("underground_temps.csv", "underground_temps", RoutePath.A, [], "Underground temperature readings"),
     DatasetConfig("buses_by_type.csv", "buses_by_type", RoutePath.A, [], "Bus fleet composition by type"),
-    DatasetConfig("air_quality_borough.csv", "air_quality", RoutePath.A, [], "Air quality measurements by borough"),
+    # Environment (Path A/AB)
     DatasetConfig("reservoir_levels.csv", "reservoir_levels", RoutePath.A, [], "Reservoir water levels"),
-    DatasetConfig("greenhouse_gas_emissions.csv", "ghg_emissions", RoutePath.A, [], "Greenhouse gas emissions data"),
-    # Urban (Path AB - both structured and text)
-    DatasetConfig("fly_tipping_incidents.csv", "fly_tipping", RoutePath.AB, ["description", "location"], "Fly-tipping incidents"),
-    DatasetConfig("public_realm_trees.csv", "trees", RoutePath.AB, ["species", "location"], "Public realm tree inventory"),
+    DatasetConfig("leggi_emissions.csv", "ghg_emissions", RoutePath.A, [], "Greenhouse gas emissions data"),
+    DatasetConfig("fly_tipping.csv", "fly_tipping", RoutePath.A, [], "Fly-tipping incidents"),
+    DatasetConfig("public_trees.csv", "trees", RoutePath.AB, ["species", "location"], "Public realm tree inventory"),
     DatasetConfig("solar_opportunity.csv", "solar_opportunity", RoutePath.A, [], "Solar energy opportunity mapping"),
     DatasetConfig("green_infrastructure.csv", "green_infra", RoutePath.AB, ["description", "name"], "Green infrastructure assets"),
     # Planning (Path AB)
-    DatasetConfig("planning_applications.csv", "planning_apps", RoutePath.AB, ["description", "proposal"], "Planning applications"),
     DatasetConfig("brownfield_register.csv", "brownfield", RoutePath.AB, ["site_name", "notes"], "Brownfield land register"),
     DatasetConfig("affordable_housing.csv", "affordable_housing", RoutePath.A, [], "Affordable housing delivery"),
-    DatasetConfig("building_stock_model.csv", "building_stock", RoutePath.A, [], "Building stock energy model"),
+    DatasetConfig("building_stock.csv", "building_stock", RoutePath.A, [], "Building stock energy model"),
     # Safety (Path AB)
-    DatasetConfig("crime_geographic.csv", "crime", RoutePath.AB, ["description", "location"], "Crime data by geography"),
-    DatasetConfig("fire_brigade_incidents.csv", "fire_incidents", RoutePath.AB, ["description", "incident_type"], "Fire brigade incidents"),
-    DatasetConfig("fire_brigade_mobilisation.csv", "fire_mobilisation", RoutePath.A, [], "Fire brigade mobilisation times"),
+    DatasetConfig("mps_crime.csv", "crime", RoutePath.AB, ["description", "location"], "Crime data by geography"),
+    DatasetConfig("fire_incidents.csv", "fire_incidents", RoutePath.AB, ["description", "incident_type"], "Fire brigade incidents"),
+    DatasetConfig("fire_mobilisation.csv", "fire_mobilisation", RoutePath.A, [], "Fire brigade mobilisation times"),
 ]
 
 
@@ -257,11 +254,11 @@ def run_ingestion() -> None:
     logger.info(f"Raw data directory: {RAW_DIR}")
     logger.info(f"Database path: {DB_PATH}")
 
-    csv_files = list(RAW_DIR.glob("*.csv"))
-    logger.info(f"Found {len(csv_files)} CSV files in data/raw/")
+    csv_files = list(RAW_DIR.glob("*.csv")) + list(RAW_DIR.glob("*.xlsx")) + list(RAW_DIR.glob("*.xls"))
+    logger.info(f"Found {len(csv_files)} data files in data/raw/")
 
     if not csv_files:
-        logger.warning("No CSV files found. Run scripts/download_data.sh first.")
+        logger.warning("No data files found. Run scripts/download_data.sh first.")
         return
 
     con = duckdb.connect(str(DB_PATH))
@@ -279,7 +276,10 @@ def run_ingestion() -> None:
             continue
 
         try:
-            df = pd.read_csv(filepath, low_memory=False)
+            if config.filename.endswith('.xlsx') or config.filename.endswith('.xls'):
+                df = pd.read_excel(filepath)
+            else:
+                df = pd.read_csv(filepath, low_memory=False)
             logger.info(f"Loaded {config.filename}: {len(df)} rows × {len(df.columns)} cols")
 
             # Phase 1: DuckDB ingestion
@@ -303,9 +303,10 @@ def run_ingestion() -> None:
             failed += 1
 
     # Record ingestion metrics
+    next_id = con.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM sys_metrics").fetchone()[0]
     con.execute(
-        "INSERT INTO sys_metrics (metric_name, metric_value, metadata) VALUES (?, ?, ?)",
-        ["ingestion_run", ingested, f'{{"skipped": {skipped}, "failed": {failed}}}'],
+        "INSERT INTO sys_metrics (id, metric_name, metric_value, metadata) VALUES (?, ?, ?, ?)",
+        [next_id, "ingestion_run", ingested, f'{{"skipped": {skipped}, "failed": {failed}}}'],
     )
 
     con.close()

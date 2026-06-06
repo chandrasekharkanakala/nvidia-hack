@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Github, Plus, Search } from "lucide-react";
 import { useChatStore } from "../stores/chatStore";
 import { SessionList } from "./SessionList";
 
@@ -10,6 +10,7 @@ const TECH_LOGOS = [
   { name: "Nebius", src: new URL("../assets/logos/nebius.svg", import.meta.url).href },
   { name: "HP", src: new URL("../assets/logos/hp.svg", import.meta.url).href },
 ];
+const CONTRIBUTORS = ["NareshMNS", "ChandrasekharKanakala", "spmsundaramg"] as const;
 
 export function Sidebar() {
   const createSession = useChatStore((s) => s.createSession);
@@ -109,6 +110,23 @@ export function Sidebar() {
               </div>
             ))}
           </div>
+        </div>
+        <p className="mt-3 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]/80">
+          Contributors
+        </p>
+        <div className="mt-2 grid gap-1">
+          {CONTRIBUTORS.map((username) => (
+            <a
+              key={username}
+              href={`https://github.com/${username}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[11px] text-[var(--color-muted)] transition-colors hover:text-[var(--color-text)]"
+            >
+              <Github size={12} />
+              @{username}
+            </a>
+          ))}
         </div>
       </div>
     </aside>

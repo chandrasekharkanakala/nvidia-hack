@@ -1,11 +1,14 @@
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Square } from "lucide-react";
 import { useChatStore } from "../stores/chatStore";
 import { useMetricsStore } from "../stores/metricsStore";
+import { useVoiceStore } from "../stores/voiceStore";
 
 export function Header() {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const sessions = useChatStore((s) => s.sessions);
   const toggle = useMetricsStore((s) => s.toggle);
+  const isSpeaking = useVoiceStore((s) => s.isSpeaking);
+  const stopSpeaking = useVoiceStore((s) => s.stopSpeaking);
 
   const session = sessions.find((s) => s.id === activeSessionId);
 
@@ -19,13 +22,25 @@ export function Header() {
           {session?.title || "New conversation"}
         </span>
       </div>
-      <button
-        onClick={toggle}
-        className="flex items-center gap-1.5 rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)] backdrop-blur-xl transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
-      >
-        <BarChart3 size={14} />
-        Metrics
-      </button>
+      <div className="flex items-center gap-2">
+        {isSpeaking && (
+          <button
+            onClick={stopSpeaking}
+            className="flex items-center gap-1.5 rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs text-[var(--color-error)] backdrop-blur-xl transition-colors hover:bg-[var(--color-surface-hover)]"
+            title="Stop voice playback"
+          >
+            <Square size={12} />
+            Stop Voice
+          </button>
+        )}
+        <button
+          onClick={toggle}
+          className="flex items-center gap-1.5 rounded-[var(--radius-btn)] border border-[var(--color-glass-border)] bg-[var(--color-glass-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)] backdrop-blur-xl transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+        >
+          <BarChart3 size={14} />
+          Metrics
+        </button>
+      </div>
     </header>
   );
 }

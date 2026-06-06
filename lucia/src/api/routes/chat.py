@@ -24,6 +24,7 @@ class ChatResponse(BaseModel):
     session_id: str
     tools_used: list[str] = []
     thinking: str | None = None
+    chart: str | None = None  # base64 PNG
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -43,11 +44,21 @@ async def chat(request: Request, body: ChatRequest):
             session_id=session_id,
         )
 
+        # Extract chart if visualizer was used
+        chart_b64 = None
+        tool_results = result.get("tool_results", [])
+        for tr in tool_results:
+            if isinstance(tr, dict) and tr.get("data") and isinstance(tr["data"], dict):
+                if tr["data"].get("chart_base64"):
+                    chart_b64 = tr["data"]["chart_base64"]
+                    break
+
         return ChatResponse(
             response=result.get("response") or result.get("content", ""),
             session_id=session_id,
             tools_used=result.get("tools_used") or [t.get("tool", t) if isinstance(t, dict) else t for t in result.get("tool_calls", [])],
             thinking=result.get("thinking"),
+            chart=chart_b64,
         )
     except Exception as e:
         logger.exception("Chat endpoint failed")
@@ -99,6 +110,14 @@ async def websocket_chat(websocket: WebSocket):
                 )
 
                 await websocket.send_json({"type": "tool_end", "tool": "agent", "duration_ms": result.get("metrics", {}).get("total_ms", 0), "success": True})
+
+                # Send chart if available
+                tool_results = result.get("tool_results", [])
+                for tr in tool_results:
+                    if isinstance(tr, dict) and tr.get("data") and isinstance(tr["data"], dict):
+                        if tr["data"].get("chart_base64"):
+                            await websocket.send_json({"type": "chart", "data": tr["data"]["chart_base64"]})
+                            break
 
                 # Stream tokens
                 response_text = result.get("content") or result.get("response", "")

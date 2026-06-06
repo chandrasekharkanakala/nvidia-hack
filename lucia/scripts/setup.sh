@@ -114,6 +114,7 @@ PACKAGES=(
     "beautifulsoup4:bs4"
     "networkx:networkx"
     "statsmodels:statsmodels"
+    "matplotlib:matplotlib"
     "structlog:structlog"
     "rich:rich"
     "python-dotenv:dotenv"
@@ -121,6 +122,7 @@ PACKAGES=(
     "pytest-asyncio:pytest_asyncio"
     "httpx:httpx"
     "pytest-mock:pytest_mock"
+    "psutil:psutil"
 )
 
 for entry in "${PACKAGES[@]}"; do

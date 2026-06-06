@@ -11,6 +11,22 @@ import pytest
 import httpx
 
 
+def pytest_collection_modifyitems(config, items):
+    """Skip performance tests if server is not running."""
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    try:
+        sock.connect(("localhost", 8000))
+        sock.close()
+    except (ConnectionRefusedError, OSError):
+        sock.close()
+        skip = pytest.mark.skip(reason="FastAPI server not running on localhost:8000")
+        for item in items:
+            if "performance" in str(item.fspath):
+                item.add_marker(skip)
+
+
 class Timer:
     """Context manager for timing code blocks."""
 
@@ -112,7 +128,7 @@ def get_gpu_memory() -> dict:
 @pytest.fixture
 def perf_client() -> httpx.AsyncClient:
     """httpx async client pointing at localhost:8000."""
-    return httpx.AsyncClient(base_url="http://localhost:8000", timeout=30.0)
+    return httpx.AsyncClient(base_url="http://localhost:8000", timeout=60.0)
 
 
 @pytest.fixture

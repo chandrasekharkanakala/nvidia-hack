@@ -26,7 +26,7 @@ class TestThroughput:
         ]
 
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": q, "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": q, "mode": "light"}}
             for q in queries
         ]
 
@@ -50,7 +50,7 @@ class TestThroughput:
         ]
 
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": q, "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": q, "mode": "light"}}
             for q in queries
         ]
 
@@ -75,7 +75,7 @@ class TestThroughput:
         ]
 
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": q, "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": q, "mode": "light"}}
             for q in queries
         ]
 
@@ -97,11 +97,11 @@ class TestThroughput:
     async def test_mixed_mode_concurrent(self, perf_client, perf_stats):
         """Mix of light and deep mode requests concurrently."""
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": "Quick lookup: bus stats", "mode": "chat"}},
-            {"method": "POST", "url": "/api/chat", "json": {"content": "Quick lookup: air quality", "mode": "chat"}},
-            {"method": "POST", "url": "/api/chat", "json": {"content": "Deep analysis: compare boroughs", "mode": "deep"}},
-            {"method": "POST", "url": "/api/chat", "json": {"content": "Quick lookup: underground", "mode": "chat"}},
-            {"method": "POST", "url": "/api/chat", "json": {"content": "Quick lookup: cycling", "mode": "chat"}},
+            {"method": "POST", "url": "/chat", "json": {"content": "Quick lookup: bus stats", "mode": "light"}},
+            {"method": "POST", "url": "/chat", "json": {"content": "Quick lookup: air quality", "mode": "light"}},
+            {"method": "POST", "url": "/chat", "json": {"content": "Deep analysis: compare boroughs", "mode": "deep"}},
+            {"method": "POST", "url": "/chat", "json": {"content": "Quick lookup: underground", "mode": "light"}},
+            {"method": "POST", "url": "/chat", "json": {"content": "Quick lookup: cycling", "mode": "light"}},
         ]
 
         results = await send_concurrent(perf_client, requests)
@@ -121,10 +121,10 @@ class TestThroughput:
         """Health endpoint should remain responsive under concurrent chat load."""
         # Fire off chat requests and health checks simultaneously
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": f"Query {i}", "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": f"Query {i}", "mode": "light"}}
             for i in range(5)
         ] + [
-            {"method": "GET", "url": "/api/health"}
+            {"method": "GET", "url": "/health"}
             for _ in range(5)
         ]
 

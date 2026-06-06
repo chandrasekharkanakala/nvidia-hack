@@ -43,16 +43,25 @@ async def execute(query: str, chart_type: str | None = None) -> dict:
     """
     try:
         from tools.sql_query import execute as sql_execute
+        import re
+
+        # Strip visualization keywords to get pure data query
+        data_query = re.sub(
+            r'\b(plot|chart|graph|draw|visualize|visualise|show me a|bar chart|pie chart|line chart|as a|generate)\b',
+            '', query, flags=re.IGNORECASE
+        ).strip()
+        if not data_query:
+            data_query = query
 
         # First, get the data via sql_query tool
-        sql_result = await sql_execute(query)
+        sql_result = await sql_execute(data_query)
 
         if sql_result.get("error") or sql_result["row_count"] == 0:
             return {
                 "chart_base64": None,
                 "chart_type": None,
                 "sql": sql_result.get("sql", ""),
-                "description": "No data available to visualize.",
+                "description": f"No data available to visualize. SQL error: {sql_result.get('error', 'No rows returned')}",
                 "error": sql_result.get("error") or "No rows returned",
             }
 

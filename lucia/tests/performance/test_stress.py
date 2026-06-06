@@ -23,9 +23,9 @@ class TestStress:
 
         for n_users in levels:
             requests = [
-                {"method": "POST", "url": "/api/chat", "json": {
+                {"method": "POST", "url": "/chat", "json": {
                     "content": f"Stress test user {i}: transport data query",
-                    "mode": "chat",
+                    "mode": "light",
                 }}
                 for i in range(n_users)
             ]
@@ -69,9 +69,9 @@ class TestStress:
 
         while (time.perf_counter() - start) < duration_s:
             requests = [
-                {"method": "POST", "url": "/api/chat", "json": {
+                {"method": "POST", "url": "/chat", "json": {
                     "content": f"Sustained load test {total_requests + i}",
-                    "mode": "chat",
+                    "mode": "light",
                 }}
                 for i in range(concurrent)
             ]
@@ -101,17 +101,17 @@ class TestStress:
         """System should recover after a burst of requests."""
         # Baseline latency
         start = time.perf_counter()
-        baseline_resp = await perf_client.post("/api/chat", json={
+        baseline_resp = await perf_client.post("/chat", json={
             "content": "Baseline query",
-            "mode": "chat",
+            "mode": "light",
         })
         baseline_ms = (time.perf_counter() - start) * 1000
 
         # Burst: 20 concurrent requests
         burst_requests = [
-            {"method": "POST", "url": "/api/chat", "json": {
+            {"method": "POST", "url": "/chat", "json": {
                 "content": f"Burst query {i}",
-                "mode": "chat",
+                "mode": "light",
             }}
             for i in range(20)
         ]
@@ -122,9 +122,9 @@ class TestStress:
 
         # Post-burst latency
         start = time.perf_counter()
-        recovery_resp = await perf_client.post("/api/chat", json={
+        recovery_resp = await perf_client.post("/chat", json={
             "content": "Recovery query",
-            "mode": "chat",
+            "mode": "light",
         })
         recovery_ms = (time.perf_counter() - start) * 1000
 
@@ -142,13 +142,13 @@ class TestStress:
         """Deep mode should still work while light mode is under load."""
         # Send 10 light + 1 deep concurrently
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {
+            {"method": "POST", "url": "/chat", "json": {
                 "content": f"Light stress {i}",
-                "mode": "chat",
+                "mode": "light",
             }}
             for i in range(10)
         ] + [
-            {"method": "POST", "url": "/api/chat", "json": {
+            {"method": "POST", "url": "/chat", "json": {
                 "content": "Deep analysis: compare all borough transport data with air quality trends",
                 "mode": "deep",
             }}
@@ -169,9 +169,9 @@ class TestStress:
         """Measure error rate at high concurrency."""
         n_requests = 30
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {
+            {"method": "POST", "url": "/chat", "json": {
                 "content": f"Capacity test {i}",
-                "mode": "chat",
+                "mode": "light",
             }}
             for i in range(n_requests)
         ]

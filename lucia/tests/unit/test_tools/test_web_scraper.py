@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 @pytest.fixture
 def mock_weather_response():
     """Mock weather API response."""
-    return MagicMock(
+    resp = MagicMock(
         status_code=200,
         json=lambda: {
             "main": {"temp": 15.2, "humidity": 72},
@@ -16,12 +16,14 @@ def mock_weather_response():
             "name": "London",
         },
     )
+    resp.raise_for_status = MagicMock()
+    return resp
 
 
 @pytest.fixture
 def mock_tfl_disruptions_response():
     """Mock TfL disruptions API response."""
-    return MagicMock(
+    resp = MagicMock(
         status_code=200,
         json=lambda: [
             {
@@ -36,6 +38,8 @@ def mock_tfl_disruptions_response():
             },
         ],
     )
+    resp.raise_for_status = MagicMock()
+    return resp
 
 
 class TestWebScraperExecute:
@@ -105,17 +109,23 @@ class TestWebScraperExecute:
     @pytest.mark.asyncio
     @patch("tools.web_scraper.httpx.AsyncClient")
     async def test_api_error_status_handled(self, mock_client_cls):
+        import httpx
+
+        mock_resp = MagicMock(status_code=500, text="Internal Server Error")
+        mock_resp.raise_for_status = MagicMock(
+            side_effect=httpx.HTTPStatusError("Server Error", request=MagicMock(), response=mock_resp)
+        )
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.get = AsyncMock(return_value=MagicMock(status_code=500, text="Internal Server Error"))
+        mock_client.get = AsyncMock(return_value=mock_resp)
         mock_client_cls.return_value = mock_client
 
         from tools.web_scraper import execute
 
         result = await execute(source="weather")
 
-        assert result.get("error") is not None or result["data"] is None
+        assert result.get("error") is not None
 
     @pytest.mark.asyncio
     @patch("tools.web_scraper.httpx.AsyncClient")

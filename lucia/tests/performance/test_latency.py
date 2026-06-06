@@ -16,7 +16,7 @@ class TestLatencyPerComponent:
         """Health check should be nearly instant (< 50ms)."""
         for i in range(10):
             start = time.perf_counter()
-            response = await perf_client.get("/api/health")
+            response = await perf_client.get("/health")
             elapsed_ms = (time.perf_counter() - start) * 1000
 
             perf_stats.record(f"health_{i}", elapsed_ms, success=response.status_code == 200)
@@ -36,9 +36,9 @@ class TestLatencyPerComponent:
 
         for i, query in enumerate(queries):
             start = time.perf_counter()
-            response = await perf_client.post("/api/chat", json={
+            response = await perf_client.post("/chat", json={
                 "content": query,
-                "mode": "chat",
+                "mode": "light",
             })
             elapsed_ms = (time.perf_counter() - start) * 1000
 
@@ -51,7 +51,7 @@ class TestLatencyPerComponent:
     async def test_deep_mode_e2e_latency(self, perf_client, perf_stats):
         """Deep mode E2E should be < 15000ms."""
         start = time.perf_counter()
-        response = await perf_client.post("/api/chat", json={
+        response = await perf_client.post("/chat", json={
             "content": "Analyze transport trends and air quality correlation across all boroughs",
             "mode": "deep",
         })
@@ -66,9 +66,9 @@ class TestLatencyPerComponent:
         """SQL-backed queries should resolve < 100ms (tool only)."""
         # This measures the full request, but SQL tool should be < 100ms
         start = time.perf_counter()
-        response = await perf_client.post("/api/chat", json={
+        response = await perf_client.post("/chat", json={
             "content": "SELECT COUNT(*) from transport data",
-            "mode": "chat",
+            "mode": "light",
         })
         elapsed_ms = (time.perf_counter() - start) * 1000
 
@@ -81,9 +81,9 @@ class TestLatencyPerComponent:
     async def test_rag_retrieval_latency(self, perf_client, perf_stats):
         """RAG retrieval should be < 200ms (embedding + search)."""
         start = time.perf_counter()
-        response = await perf_client.post("/api/chat", json={
+        response = await perf_client.post("/chat", json={
             "content": "What are the congestion charge policies?",
-            "mode": "chat",
+            "mode": "light",
         })
         elapsed_ms = (time.perf_counter() - start) * 1000
 
@@ -107,9 +107,9 @@ class TestLatencyPerComponent:
         image_b64 = base64.b64encode(png_bytes).decode()
 
         start = time.perf_counter()
-        response = await perf_client.post("/api/chat", json={
+        response = await perf_client.post("/chat", json={
             "content": "Describe this image",
-            "mode": "chat",
+            "mode": "light",
             "image": image_b64,
         })
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -125,9 +125,9 @@ class TestLatencyPerComponent:
         start = time.perf_counter()
 
         try:
-            async with perf_client.stream("POST", "/api/chat/stream", json={
+            async with perf_client.stream("POST", "/chat/stream", json={
                 "content": "Hello",
-                "mode": "chat",
+                "mode": "light",
             }) as response:
                 async for chunk in response.aiter_bytes():
                     elapsed_ms = (time.perf_counter() - start) * 1000
@@ -135,9 +135,9 @@ class TestLatencyPerComponent:
                     break  # Only measure first chunk
         except Exception:
             # If streaming not available, measure full response
-            response = await perf_client.post("/api/chat", json={
+            response = await perf_client.post("/chat", json={
                 "content": "Hello",
-                "mode": "chat",
+                "mode": "light",
             })
             elapsed_ms = (time.perf_counter() - start) * 1000
             perf_stats.record("ttft_light", elapsed_ms, success=response.status_code == 200)

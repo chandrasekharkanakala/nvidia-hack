@@ -72,7 +72,7 @@ class TestResourceUsage:
 
         # Generate load
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": f"Query {i}", "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": f"Query {i}", "mode": "light"}}
             for i in range(5)
         ]
         await send_concurrent(perf_client, requests)
@@ -107,9 +107,9 @@ class TestResourceUsage:
 
         # Send 20 requests sequentially
         for i in range(20):
-            await perf_client.post("/api/chat", json={
+            await perf_client.post("/chat", json={
                 "content": f"Memory test query {i}",
-                "mode": "chat",
+                "mode": "light",
             })
 
         # Allow GC
@@ -135,7 +135,7 @@ class TestResourceUsage:
 
         # Generate load
         requests = [
-            {"method": "POST", "url": "/api/chat", "json": {"content": f"GPU load test {i}", "mode": "chat"}}
+            {"method": "POST", "url": "/chat", "json": {"content": f"GPU load test {i}", "mode": "light"}}
             for i in range(10)
         ]
         await send_concurrent(perf_client, requests)

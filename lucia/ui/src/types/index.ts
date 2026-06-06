@@ -5,6 +5,7 @@ export interface Message {
   mode: AgentMode
   timestamp: string
   image?: string // base64
+  chart?: string // base64 PNG from visualizer
   metrics?: MessageMetrics
   toolCalls?: ToolCallEvent[]
 }
@@ -40,6 +41,7 @@ export type WSIncoming =
   | { type: "tool_start"; tool: string; description: string }
   | { type: "tool_end"; tool: string; duration_ms: number; success: boolean }
   | { type: "token"; content: string }
+  | { type: "chart"; data: string }
   | { type: "done"; metrics: MessageMetrics }
   | { type: "error"; message: string }
 

@@ -58,6 +58,7 @@ export function useWebSocket() {
         console.log("[WS] Connected");
       };
 
+
       ws.onmessage = (event) => {
         const data: WSIncoming = JSON.parse(event.data);
 
@@ -90,6 +91,10 @@ export function useWebSocket() {
 
           case "token":
             addToken(data.content);
+            break;
+          
+          case "chart":
+            updateLastAssistantMessage({ chart: data.data });
             break;
 
           case "done":

@@ -6,7 +6,7 @@ import { SessionList } from "./SessionList";
 type ActivityFilter = "all" | "today" | "week";
 const TECH_LOGOS = [
   { name: "NVIDIA", src: new URL("../assets/logos/nvidia.svg", import.meta.url).href },
-  { name: "IIElemevenlabs", src: new URL("../assets/logos/elevenlabs.svg", import.meta.url).href },
+  { name: "ElevenLabs", src: new URL("../assets/logos/elevenlabs.svg", import.meta.url).href },
   { name: "Nebius", src: new URL("../assets/logos/nebius.svg", import.meta.url).href },
   { name: "HP", src: new URL("../assets/logos/hp.svg", import.meta.url).href },
 ];

@@ -33,6 +33,7 @@ async def speech_to_text(file: UploadFile = File(...)):
             response = await client.post(
                 f"{ELEVENLABS_BASE_URL}/speech-to-text",
                 headers={"xi-api-key": api_key},
+                data={"model_id": settings.elevenlabs_model_stt},
                 files={"file": (file.filename or "audio.webm", audio_bytes)},
             )
             response.raise_for_status()
@@ -59,7 +60,7 @@ async def text_to_speech(body: TTSRequest):
                 headers={"xi-api-key": api_key, "Content-Type": "application/json"},
                 json={
                     "text": body.text,
-                    "model_id": "eleven_monolingual_v1",
+                    "model_id": settings.elevenlabs_model_tts,
                     "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
                 },
             )

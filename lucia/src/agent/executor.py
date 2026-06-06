@@ -87,8 +87,11 @@ async def execute_plan(
         depends_on = step.get("depends_on")
         if depends_on is not None:
             # Handle both int and list[int] formats
-            dep_idx = depends_on[0] if isinstance(depends_on, list) else depends_on
-            if isinstance(dep_idx, int) and 0 <= dep_idx < len(results):
+            if isinstance(depends_on, list):
+                dep_idx = depends_on[0] if depends_on else None
+            else:
+                dep_idx = depends_on
+            if dep_idx is not None and isinstance(dep_idx, int) and 0 <= dep_idx < len(results):
                 dep_result = results[dep_idx]
                 if dep_result["success"] and dep_result["data"] is not None:
                     params["context"] = dep_result["data"]

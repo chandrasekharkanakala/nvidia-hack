@@ -21,12 +21,19 @@ bash scripts/setup.sh
 bash scripts/download_data.sh
 
 # 5. Ingest data (loads into DuckDB + builds FAISS vector index)
-python scripts/ingest.py
+source .venv/bin/activate
+python3 scripts/ingest.py
 
-# 6. Start all services
+# 6. Run tests (no services needed — validates setup + code)
+bash scripts/test.sh quick
+
+# 7. Start all services
 bash scripts/start.sh
 
-# 7. Open in browser (via SSH port-forward)
+# 8. Run full test suite (validates everything end-to-end)
+bash scripts/test.sh all
+
+# 9. Open in browser (via SSH port-forward)
 # From your laptop:
 ssh -L 3000:localhost:3000 -L 8000:localhost:8000 user@dgx-spark
 # Then open: http://localhost:3000

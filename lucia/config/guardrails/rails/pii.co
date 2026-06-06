@@ -1,0 +1,13 @@
+define flow detect pii
+  """Scan user input for personally identifiable information."""
+  user said something
+  $has_pii = execute check_pii(text=$user_message)
+  if $has_pii
+    $user_message = execute redact_pii(text=$user_message)
+
+define flow redact pii
+  """Ensure no PII leaks in agent output."""
+  bot said something
+  $has_pii = execute check_pii(text=$bot_message)
+  if $has_pii
+    $bot_message = execute redact_pii(text=$bot_message)

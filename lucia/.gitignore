@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+
+# Node
+node_modules/
+
+# Data (downloaded/generated)
+data/raw/
+data/processed/
+data/embeddings/
+data/output/
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
+# Logs
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

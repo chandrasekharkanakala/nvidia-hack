@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #0f0f0f;
+  --color-surface: #1a1a2e;
+  --color-surface-hover: #242440;
+  --color-accent: #76b900;
+  --color-accent-deep: #9333ea;
+  --color-text: #e4e4e7;
+  --color-muted: #71717a;
+  --color-border: #27272a;
+  --color-error: #ef4444;
+  --radius-card: 12px;
+  --radius-btn: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, pre {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* Streaming cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.streaming-cursor::after {
+  content: "▋";
+  animation: blink 1s infinite;
+  color: var(--color-accent);
+}
+
+/* Voice recording pulse */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.voice-pulse {
+  animation: pulse-ring 1.2s infinite;
+}
+
+/* Tool indicator spin */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.tool-spin {
+  animation: spin 1s linear infinite;
+}

@@ -1,0 +1,7 @@
+define flow check topic allowed
+  """Keep agent focused on urban operations domain."""
+  user said something
+  $is_allowed = execute topic_check(text=$user_message)
+  if not $is_allowed
+    bot say "I'm LUCIA — London's urban intelligence agent. I can help with traffic patterns, air quality, city planning, transport, and public services. What would you like to know?"
+    stop

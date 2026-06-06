@@ -1,0 +1,7 @@
+define flow check jailbreak
+  """Block prompt injection and jailbreak attempts."""
+  user said something
+  $is_jailbreak = execute content_safety_check(text=$user_message, category="jailbreak")
+  if $is_jailbreak
+    bot say "I can only assist with London urban planning and city operations queries. Please ask about traffic, air quality, transport, or city infrastructure."
+    stop

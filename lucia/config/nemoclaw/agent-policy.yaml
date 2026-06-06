@@ -1,0 +1,71 @@
+# ============================================================================
+# LUCIA — NemoClaw Agent Policy
+# ============================================================================
+# This file controls what the agent sandbox can access.
+# CURRENTLY: Open policy (any-to-any) for development.
+# UPDATE: Restrict network/filesystem before production/demo as needed.
+# ============================================================================
+
+agent:
+  name: lucia
+  description: "London Urban City Intelligence Agent"
+
+# ---------------------------------------------------------------------------
+# PERMISSIONS — Currently OPEN (update before demo if needed)
+# ---------------------------------------------------------------------------
+permissions:
+  filesystem:
+    read:
+      - "**/*"              # TODO: restrict to /data/* for demo
+    write:
+      - "**/*"              # TODO: restrict to /data/output/* and /tmp/*
+
+  network:
+    allow:
+      - "*:*"               # TODO: restrict to specific hosts/ports for demo
+    # Uncomment below to lock down:
+    # allow:
+    #   - "localhost:8001"          # vLLM (LLM + Safety)
+    #   - "localhost:8002"          # NV-Embed-v2
+    #   - "localhost:8003"          # NeVA-7B Vision
+    #   - "localhost:8000"          # FastAPI backend
+    #   - "api.elevenlabs.io:443"  # Voice STT/TTS
+    #   - "api.tfl.gov.uk:443"     # Transport for London
+    #   - "api.openweathermap.org:443"  # Weather
+    #   - "data.london.gov.uk:443" # London Datastore
+    # deny: ["*"]
+
+  tools:
+    enabled:
+      - rag_search
+      - sql_query
+      - web_scraper
+      - simulator
+      - predictor
+      - vision
+      - calculator
+
+# ---------------------------------------------------------------------------
+# INFERENCE ROUTING
+# ---------------------------------------------------------------------------
+inference:
+  primary:
+    model: nemotron-3-nano
+    endpoint: http://localhost:8001/v1
+  safety:
+    model: nemotron-content-safety-4b
+    endpoint: http://localhost:8001/v1
+  embedding:
+    model: nv-embed-v2
+    endpoint: http://localhost:8002/v1
+  vision:
+    model: neva-7b
+    endpoint: http://localhost:8003/v1
+
+# ---------------------------------------------------------------------------
+# AUDIT — All actions logged
+# ---------------------------------------------------------------------------
+audit:
+  log_level: full
+  store: file
+  path: ./logs/nemoclaw_audit.jsonl

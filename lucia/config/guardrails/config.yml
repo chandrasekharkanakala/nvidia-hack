@@ -1,0 +1,59 @@
+models:
+  - type: main
+    engine: vllm
+    parameters:
+      base_url: ${LUCIA_VLLM_BASE_URL}
+      model: ${LUCIA_LLM_MODEL}
+
+  - type: content_safety
+    engine: vllm
+    parameters:
+      base_url: ${LUCIA_VLLM_BASE_URL}
+      model: ${LUCIA_SAFETY_MODEL}
+
+rails:
+  input:
+    flows:
+      - detect pii
+      - check jailbreak
+      - check topic allowed
+
+  output:
+    flows:
+      - redact pii
+      - check hallucination
+      - check content safety
+
+  config:
+    pii:
+      entities:
+        - PERSON
+        - EMAIL_ADDRESS
+        - PHONE_NUMBER
+        - UK_NHS_NUMBER
+        - CREDIT_CARD
+        - UK_POSTCODE
+      action: redact
+
+    topic:
+      allowed:
+        - urban planning
+        - traffic analysis
+        - air quality
+        - city infrastructure
+        - transport
+        - public services
+        - events impact
+        - weather correlation
+        - road safety
+        - cycling
+        - environment
+        - housing
+        - crime safety
+      blocked:
+        - personal advice
+        - medical diagnosis
+        - legal advice
+        - financial trading
+        - politics
+        - religion

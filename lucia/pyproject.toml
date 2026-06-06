@@ -1,0 +1,42 @@
+[project]
+name = "lucia"
+version = "0.1.0"
+description = "London Urban City Intelligence Agent"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "websockets>=13.0",
+    "pydantic-settings>=2.0",
+    "nemoguardrails>=0.10.0",
+    "duckdb>=1.0.0",
+    "pyarrow>=17.0",
+    "pandas>=2.2",
+    "openpyxl>=3.1",
+    "faiss-gpu>=1.8",
+    "numpy>=2.0",
+    "openai>=1.40",
+    "aiohttp>=3.10",
+    "beautifulsoup4>=4.12",
+    "networkx>=3.3",
+    "statsmodels>=0.14",
+    "structlog>=24.0",
+    "rich>=13.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "pytest-mock>=3.14",
+]
+nvidia = [
+    "vllm>=0.6",
+    "nemo-toolkit>=2.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

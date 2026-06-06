@@ -35,7 +35,7 @@ for d in [PROCESSED_DIR, EMBEDDINGS_DIR, LOG_DIR]:
 # Logging setup
 log_file = LOG_DIR / f"ingest_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="[%(asctime)s] %(levelname)s: %(message)s",
     handlers=[
         logging.FileHandler(log_file),
@@ -43,6 +43,11 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+# Suppress noisy HTTP debug logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
 
 # Capture unhandled exceptions into the log
 def _exception_handler(exc_type, exc_value, exc_tb):
@@ -203,8 +208,20 @@ def extract_text_chunks(df: pd.DataFrame, text_columns: list[str], table_name: s
 
 
 def embed_chunks(chunks: list[dict]) -> Optional[np.ndarray]:
-    """Generate embeddings for text chunks using a simple fallback."""
+    """Generate embeddings for text chunks. Returns None if service unavailable."""
     if not chunks:
+        return None
+
+    # Pre-check: is embedding service running?
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    try:
+        sock.connect(("localhost", 8002))
+        sock.close()
+    except (ConnectionRefusedError, OSError):
+        sock.close()
+        logger.info("SKIP embeddings: vLLM embedding service not running on :8002 (run start.sh first)")
         return None
 
     try:
@@ -219,9 +236,8 @@ def embed_chunks(chunks: list[dict]) -> Optional[np.ndarray]:
             all_embeddings.extend([e.embedding for e in response.data])
         return np.array(all_embeddings, dtype=np.float32)
     except Exception as e:
-        logger.warning(f"Embedding service unavailable ({e}), using random vectors for development")
-        dim = 4096
-        return np.random.randn(len(chunks), dim).astype(np.float32)
+        logger.warning(f"Embedding failed: {e}")
+        return None
 
 
 def build_faiss_index(table_name: str, chunks: list[dict], embeddings: np.ndarray) -> None:
@@ -249,7 +265,11 @@ def build_faiss_index(table_name: str, chunks: list[dict], embeddings: np.ndarra
 
 
 def run_ingestion() -> None:
-    """Main ingestion pipeline."""
+    """Main ingestion pipeline.
+    
+    Phase 1: Load CSVs → DuckDB (always runs, skips existing tables)
+    Phase 2: Text → Embeddings → FAISS (only if :8002 is running)
+    """
     logger.info("=== Lucia Ingestion Pipeline Starting ===")
     logger.info(f"Raw data directory: {RAW_DIR}")
     logger.info(f"Database path: {DB_PATH}")
@@ -264,6 +284,21 @@ def run_ingestion() -> None:
     con = duckdb.connect(str(DB_PATH))
     create_system_tables(con)
 
+    # --- Check if embedding service is available (once) ---
+    import socket
+    embedding_available = False
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    try:
+        sock.connect(("localhost", 8002))
+        sock.close()
+        embedding_available = True
+        logger.info("Embedding service detected on :8002 ✓")
+    except (ConnectionRefusedError, OSError):
+        sock.close()
+        logger.info("Embedding service not running on :8002 — skipping all embeddings")
+        logger.info("  (Run 'bash scripts/start.sh' first, then re-run ingest to build FAISS indices)")
+
     ingested = 0
     skipped = 0
     failed = 0
@@ -271,7 +306,7 @@ def run_ingestion() -> None:
     for config in DATASET_REGISTRY:
         filepath = RAW_DIR / config.filename
         if not filepath.exists():
-            logger.warning(f"SKIP: {config.filename} not found in data/raw/")
+            logger.info(f"SKIP: {config.filename} not in data/raw/")
             skipped += 1
             continue
 
@@ -282,12 +317,12 @@ def run_ingestion() -> None:
                 df = pd.read_csv(filepath, low_memory=False)
             logger.info(f"Loaded {config.filename}: {len(df)} rows × {len(df.columns)} cols")
 
-            # Phase 1: DuckDB ingestion
+            # Phase 1: DuckDB ingestion (always)
             if config.route in (RoutePath.A, RoutePath.AB):
                 ingest_to_duckdb(con, config, df)
 
-            # Phase 2: Embedding + FAISS
-            if config.route in (RoutePath.B, RoutePath.AB):
+            # Phase 2: Embedding + FAISS (only if service is running)
+            if embedding_available and config.route in (RoutePath.B, RoutePath.AB):
                 chunks = extract_text_chunks(df, config.text_columns, config.table_name)
                 if chunks:
                     logger.info(f"Extracted {len(chunks)} text chunks from {config.table_name}")

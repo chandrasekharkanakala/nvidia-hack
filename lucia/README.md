@@ -17,21 +17,19 @@ nano .env    # Set LUCIA_ELEVENLABS_API_KEY=sk_your_key_here
 # 3. Setup (installs everything — idempotent, safe to re-run)
 bash scripts/setup.sh
 
-# 4. Download London datasets (~24 files from data.london.gov.uk)
+# 4. Download London datasets (~20 files from data.london.gov.uk)
 bash scripts/download_data.sh
 
-# 5. Ingest data (loads into DuckDB + builds FAISS vector index)
+# 5. Start all services (vLLM models, API, UI)
+bash scripts/start.sh
+
+# 6. Ingest data (loads into DuckDB + builds FAISS embeddings)
+#    Requires services running for embeddings on :8002
 source .venv/bin/activate
 python3 scripts/ingest.py
 
-# 6. Run tests (no services needed — validates setup + code)
+# 7. Run tests (validates everything end-to-end)
 bash scripts/test.sh quick
-
-# 7. Start all services
-bash scripts/start.sh
-
-# 8. Run full test suite (validates everything end-to-end)
-bash scripts/test.sh all
 
 # 9. Open in browser (via SSH port-forward)
 # From your laptop:

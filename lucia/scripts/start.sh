@@ -125,7 +125,7 @@ if port_in_use 8000; then
 else
     log "Starting FastAPI on port 8000..."
     cd "$PROJECT_DIR"
-    PYTHONPATH="$PROJECT_DIR" uvicorn src.api.main:app --host 0.0.0.0 --port 8000 \
+    PYTHONPATH="$PROJECT_DIR:$PROJECT_DIR/src" uvicorn api.main:app --host 0.0.0.0 --port 8000 \
         > "$LOG_DIR/fastapi.log" 2>&1 &
     echo "$! FastAPI 8000" >> "$PID_FILE"
     log "Started FastAPI (PID: $!)"

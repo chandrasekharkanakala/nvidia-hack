@@ -56,20 +56,29 @@ async def generate(
             stream=True,
         )
 
-        # Handle both streaming (async iterator) and non-streaming responses
-        if hasattr(response, "__aiter__"):
-            async for chunk in response:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    token = chunk.choices[0].delta.content
-                    full_response += token
-                    if on_token:
-                        try:
-                            await on_token(token)
-                        except Exception:
-                            pass
-        else:
-            # Non-streaming response
-            full_response = response.choices[0].message.content or ""
+        # Detect if response is streaming or non-streaming
+        # Non-streaming: response.choices[0].message.content is a string
+        # Streaming: response is an async iterator of chunks
+        try:
+            msg_content = response.choices[0].message.content
+            if isinstance(msg_content, str):
+                full_response = msg_content
+            else:
+                raise AttributeError("not a non-streaming response")
+        except (AttributeError, IndexError, TypeError):
+            # Streaming response (async iterator)
+            try:
+                async for chunk in response:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        token = chunk.choices[0].delta.content
+                        full_response += token
+                        if on_token:
+                            try:
+                                await on_token(token)
+                            except Exception:
+                                pass
+            except (TypeError, AttributeError, StopAsyncIteration):
+                pass
 
         return full_response.strip() if full_response else "I wasn't able to generate a response. Please try again."
 

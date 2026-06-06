@@ -85,10 +85,13 @@ async def execute_plan(
 
         # Inject dependency output into params if applicable
         depends_on = step.get("depends_on")
-        if depends_on is not None and 0 <= depends_on < len(results):
-            dep_result = results[depends_on]
-            if dep_result["success"] and dep_result["data"] is not None:
-                params["context"] = dep_result["data"]
+        if depends_on is not None:
+            # Handle both int and list[int] formats
+            dep_idx = depends_on[0] if isinstance(depends_on, list) else depends_on
+            if isinstance(dep_idx, int) and 0 <= dep_idx < len(results):
+                dep_result = results[dep_idx]
+                if dep_result["success"] and dep_result["data"] is not None:
+                    params["context"] = dep_result["data"]
 
         # Emit tool_start
         if on_event:

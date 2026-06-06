@@ -57,6 +57,7 @@ async def execute(image_base64: str, question: str = "Describe this image") -> d
             "description": description,
             "objects_detected": objects_detected,
             "anomalies": anomalies,
+            "error": None,
         }
 
     except Exception as e:

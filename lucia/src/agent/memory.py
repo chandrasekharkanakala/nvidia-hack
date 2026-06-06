@@ -10,7 +10,6 @@ def _get_con() -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(settings.duckdb_path)
     con.execute("""
         CREATE TABLE IF NOT EXISTS chat_messages (
-            id INTEGER PRIMARY KEY,
             session_id VARCHAR NOT NULL,
             role VARCHAR NOT NULL,
             content TEXT NOT NULL,
@@ -46,12 +45,21 @@ async def save_message(session_id: str, role: str, content: str, mode: str) -> N
     try:
         con = _get_con()
         con.execute(
-            """INSERT INTO chat_messages (session_id, role, content, mode, created_at)
-               VALUES (?, ?, ?, ?, ?)""",
+            """INSERT INTO chat_messages (id, session_id, role, content, mode, created_at)
+               VALUES (nextval('chat_messages_id_seq'), ?, ?, ?, ?, ?)""",
             [session_id, role, content, mode, datetime.now(timezone.utc)],
         )
     except Exception:
-        pass
+        # Fallback: try without id column (table may not have it)
+        try:
+            con = _get_con()
+            con.execute(
+                """INSERT INTO chat_messages (session_id, role, content, mode, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                [session_id, role, content, mode, datetime.now(timezone.utc)],
+            )
+        except Exception:
+            pass
 
 
 async def list_sessions() -> list[dict]:

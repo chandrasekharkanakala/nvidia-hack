@@ -21,10 +21,10 @@ class TTSRequest(BaseModel):
 
 
 @router.post("/stt")
-async def speech_to_text(audio: UploadFile = File(...)):
+async def speech_to_text(file: UploadFile = File(...)):
     """Transcribe audio file to text using ElevenLabs STT."""
     try:
-        audio_bytes = await audio.read()
+        audio_bytes = await file.read()
         api_key = settings.elevenlabs_api_key
         if not api_key:
             return {"text": "[STT unavailable — no API key]"}
@@ -33,7 +33,7 @@ async def speech_to_text(audio: UploadFile = File(...)):
             response = await client.post(
                 f"{ELEVENLABS_BASE_URL}/speech-to-text",
                 headers={"xi-api-key": api_key},
-                files={"file": (audio.filename or "audio.webm", audio_bytes)},
+                files={"file": (file.filename or "audio.webm", audio_bytes)},
             )
             response.raise_for_status()
             data = response.json()

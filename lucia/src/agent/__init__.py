@@ -31,7 +31,9 @@ async def process_message(
     Returns: {content: str, mode: str, metrics: dict, tool_calls: list}
     """
     start_time = time.perf_counter()
-    effective_mode = mode.value
+    effective_mode = mode.value if hasattr(mode, "value") else str(mode)
+    if effective_mode not in ("light", "deep"):
+        effective_mode = "light"
 
     try:
         # Save user message

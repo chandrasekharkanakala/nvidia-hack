@@ -22,9 +22,10 @@ async def lifespan(app: FastAPI):
     db = duckdb.connect(db_path)
 
     # Create tables if not exist
+    db.execute("CREATE SEQUENCE IF NOT EXISTS metrics_id_seq START 1")
     db.execute("""
         CREATE TABLE IF NOT EXISTS metrics (
-            id INTEGER PRIMARY KEY,
+            id INTEGER DEFAULT nextval('metrics_id_seq') PRIMARY KEY,
             endpoint TEXT,
             method TEXT,
             status_code INTEGER,

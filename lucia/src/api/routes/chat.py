@@ -33,13 +33,13 @@ async def chat(request: Request, body: ChatRequest):
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=400, content={"detail": "content must not be empty"})
     try:
-        from agent import process_message
+        from agent import process_message, AgentMode
 
         session_id = body.session_id or str(uuid.uuid4())
 
         result = await process_message(
             content=body.content,
-            mode=body.mode,
+            mode=AgentMode(body.mode) if body.mode in ("light", "deep") else AgentMode.light,
             session_id=session_id,
         )
 
@@ -70,27 +70,29 @@ async def websocket_chat(websocket: WebSocket):
 
             content = message.get("content", "")
             session_id = message.get("session_id", str(uuid.uuid4()))
-            mode = message.get("mode", "chat")
+            mode_str = message.get("mode", "chat")
 
             # Send thinking event
             await websocket.send_json({"event": "thinking", "data": {"session_id": session_id}})
 
             try:
-                from agent import process_message_stream
+                from agent import process_message_stream, AgentMode as _AgentMode
 
+                _mode = _AgentMode(mode_str) if mode_str in ("light", "deep") else _AgentMode.light
                 async for event in process_message_stream(
-                    content=content, mode=mode, session_id=session_id
+                    content=content, mode=_mode, session_id=session_id
                 ):
                     await websocket.send_json(event)
 
             except ImportError:
                 # Fallback if streaming not implemented
-                from agent import process_message
+                from agent import process_message, AgentMode as _AgentMode2
 
+                _mode = _AgentMode2(mode_str) if mode_str in ("light", "deep") else _AgentMode2.light
                 await websocket.send_json({"event": "tool_start", "data": {"tool": "agent"}})
 
                 result = await process_message(
-                    content=content, mode=mode, session_id=session_id
+                    content=content, mode=_mode, session_id=session_id
                 )
 
                 await websocket.send_json({"event": "tool_end", "data": {"tool": "agent"}})

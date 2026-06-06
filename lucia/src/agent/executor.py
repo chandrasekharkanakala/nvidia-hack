@@ -99,7 +99,12 @@ async def execute_plan(
         # Emit tool_start
         if on_event:
             try:
-                await on_event({"type": "tool_start", "tool": tool_name, "step": i})
+                await on_event("tool_start", tool=tool_name, step=i)
+            except TypeError:
+                try:
+                    await on_event({"type": "tool_start", "tool": tool_name, "step": i})
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -115,13 +120,19 @@ async def execute_plan(
         # Emit tool_end
         if on_event:
             try:
-                await on_event({
-                    "type": "tool_end",
-                    "tool": tool_name,
-                    "step": i,
-                    "success": result["success"],
-                    "duration_ms": result["duration_ms"],
-                })
+                await on_event("tool_end", tool=tool_name, step=i,
+                               success=result["success"], duration_ms=result["duration_ms"])
+            except TypeError:
+                try:
+                    await on_event({
+                        "type": "tool_end",
+                        "tool": tool_name,
+                        "step": i,
+                        "success": result["success"],
+                        "duration_ms": result["duration_ms"],
+                    })
+                except Exception:
+                    pass
             except Exception:
                 pass
 

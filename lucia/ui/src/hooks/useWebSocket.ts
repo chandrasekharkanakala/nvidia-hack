@@ -30,13 +30,14 @@ async function speakReply(text: string) {
   if (!trimmed) return;
 
   const voiceState = useVoiceStore.getState();
-  if (voiceState.isSpeaking) return;
+  if (!voiceState.isVoiceEnabled || voiceState.isSpeaking) return;
 
   voiceState.setSpeaking(true);
   let audioContext: AudioContext | null = null;
 
   try {
     const audioBlob = await postTTS(trimmed);
+    if (!useVoiceStore.getState().isVoiceEnabled) return;
     audioContext = new AudioContext();
     const buffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
     const source = audioContext.createBufferSource();

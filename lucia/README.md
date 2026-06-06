@@ -113,13 +113,17 @@ Currently open (any-to-any). Edit `permissions.network.allow` and `permissions.f
 | Command | What It Does |
 |---------|-------------|
 | `bash scripts/setup.sh` | Install all dependencies (idempotent) |
-| `bash scripts/download_data.sh` | Fetch London datasets (skips existing) |
+| `bash scripts/download_data.sh` | Fetch London datasets (skips existing, retry+backoff) |
 | `python scripts/ingest.py` | Load data → DuckDB + FAISS (skips done) |
 | `bash scripts/start.sh` | Start all services (skips running) |
 | `bash scripts/stop.sh` | Stop all services |
-| `bash scripts/test.sh` | Run all tests |
-| `bash scripts/test.sh quick` | Unit + integration only (fast) |
-| `bash scripts/test.sh perf` | Performance benchmarks |
+| `bash scripts/test.sh` | Run all test suites (unit→integration→e2e→perf) |
+| `bash scripts/test.sh quick` | Unit + integration only (no services needed) |
+| `bash scripts/test.sh unit` | Unit tests only (mocked, < 10s) |
+| `bash scripts/test.sh integration` | Integration tests only (mocked LLM) |
+| `bash scripts/test.sh e2e` | E2E tests (requires running services) |
+| `bash scripts/test.sh perf` | Performance benchmarks (requires running services) |
+| `bash scripts/test.sh file <path>` | Run a single test file |
 
 All scripts log to `logs/` with timestamps.
 
@@ -127,13 +131,61 @@ All scripts log to `logs/` with timestamps.
 
 ## Testing
 
+### Quick Start — Run Tests
+
 ```bash
-bash scripts/test.sh unit          # Mocked, no services needed
-bash scripts/test.sh integration   # Mocked, no services needed
-bash scripts/test.sh e2e           # Requires running services
-bash scripts/test.sh perf          # Performance benchmarks
-bash scripts/test.sh file tests/unit/test_router.py  # Single file
+# Run everything (unit → integration → e2e → perf)
+bash scripts/test.sh all
+
+# Fast feedback (no services needed — uses mocks)
+bash scripts/test.sh quick
+
+# Individual suites
+bash scripts/test.sh unit            # Unit tests only (mocked, fast)
+bash scripts/test.sh integration     # Integration tests (mocked LLM, real DuckDB)
+bash scripts/test.sh e2e             # End-to-end (requires: bash scripts/start.sh)
+bash scripts/test.sh perf            # Performance benchmarks (requires: bash scripts/start.sh)
+
+# Single file
+bash scripts/test.sh file tests/unit/test_router.py
+
+# Run directly with pytest (more control)
+source .venv/bin/activate
+pytest tests/unit/ -v                                     # All unit tests
+pytest tests/unit/test_router.py -v                       # Single file
+pytest tests/unit/test_tools/ -v                          # All tool tests
+pytest tests/integration/test_guardrails.py -v            # Safety tests
+pytest tests/performance/ -v --tb=short                   # Perf with timing
+pytest tests/ -k "test_pii" -v                            # By keyword
 ```
+
+### Test Execution Order (Recommended Sequence)
+
+```bash
+# 1. Before deploying (no services needed):
+bash scripts/test.sh quick
+
+# 2. After starting services:
+bash scripts/start.sh
+bash scripts/test.sh e2e
+
+# 3. Before demo (performance validation):
+bash scripts/test.sh perf
+```
+
+### Test Layers
+
+| Layer | Files | What's Tested | Services Needed |
+|-------|-------|---------------|-----------------|
+| **Unit** | `tests/unit/` | Router, planner, executor, reflector, synthesizer, tools | None (all mocked) |
+| **Integration** | `tests/integration/` | Agent flows, guardrails, ingestion, API endpoints | None (mocked LLM) |
+| **E2E** | `tests/e2e/` | Full chat pipeline, vision, demo scenarios | All services running |
+| **Performance** | `tests/performance/` | Latency, throughput, resources, stress | All services running |
+
+### Test Results
+
+All test output is logged to `logs/test_<timestamp>.log`.
+Per-suite logs: `logs/test_unit_<timestamp>.log`, etc.
 
 ---
 

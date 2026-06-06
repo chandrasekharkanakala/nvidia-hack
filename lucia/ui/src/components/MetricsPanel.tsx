@@ -31,7 +31,7 @@ export function MetricsPanel() {
           label="Latency"
           value={
             lastAssistant?.metrics
-              ? `${lastAssistant.metrics.timeToFirstTokenMs}ms TTFT / ${lastAssistant.metrics.latencyMs}ms total`
+              ? `${lastAssistant.metrics.timeToFirstTokenMs ?? "—"}ms TTFT / ${lastAssistant.metrics.latencyMs}ms total`
               : `${latency}ms`
           }
         />
@@ -40,7 +40,7 @@ export function MetricsPanel() {
           label="Tokens"
           value={
             lastAssistant?.metrics
-              ? `${lastAssistant.metrics.tokensPrompt} prompt + ${lastAssistant.metrics.tokensCompletion} completion`
+              ? `${lastAssistant.metrics.tokensPrompt ?? "—"} prompt + ${lastAssistant.metrics.tokensCompletion} completion`
               : `${tokens} completion`
           }
         />

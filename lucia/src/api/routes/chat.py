@@ -125,11 +125,15 @@ async def websocket_chat(websocket: WebSocket):
                     chunk = response_text[i : i + 10]
                     await websocket.send_json({"type": "token", "content": chunk})
 
+            metrics_data = result.get("metrics", {}) if result else {}
             await websocket.send_json({
                 "type": "done",
                 "metrics": {
-                    "latencyMs": result.get("metrics", {}).get("total_ms", 0) if result else 0,
-                    "tokensCompletion": len(response_text) // 4,
+                    "latencyMs": metrics_data.get("total_ms", 0),
+                    "timeToFirstTokenMs": metrics_data.get("time_to_first_token_ms", 0),
+                    "tokensPrompt": metrics_data.get("tokens_prompt", 0),
+                    "tokensCompletion": metrics_data.get("tokens_completion", 0) or len(response_text) // 4,
+                    "toolsUsed": metrics_data.get("tools_used", []),
                 }
             })
 

@@ -62,35 +62,37 @@ declare -A SERVICES=(
     ["React-UI"]=3000
 )
 
-# --- vLLM (port 8001) ---
+# --- vLLM (port 8001) — Nemotron Nano (reasoning + planning) ---
 if port_in_use 8001; then
     log "SKIP: vLLM already running on port 8001"
 else
-    log "Starting vLLM on port 8001..."
+    log "Starting Nemotron Nano on port 8001..."
     python3 -m vllm.entrypoints.openai.api_server \
-        --model meta-llama/Llama-3.1-8B-Instruct \
+        --model nvidia/Nemotron-Mini-4B-Instruct \
         --port 8001 \
         --tensor-parallel-size 1 \
+        --gpu-memory-utilization 0.3 \
         > "$LOG_DIR/vllm.log" 2>&1 &
     echo "$! vLLM 8001" >> "$PID_FILE"
-    log "Started vLLM (PID: $!)"
+    log "Started Nemotron Nano (PID: $!)"
 fi
 
-# --- NV-Embed (port 8002) ---
+# --- NV-Embed-v2 (port 8002) — NVIDIA embeddings ---
 if port_in_use 8002; then
     log "SKIP: NV-Embed already running on port 8002"
 else
-    log "Starting NV-Embed on port 8002..."
+    log "Starting NV-Embed-v2 on port 8002..."
     python3 -m vllm.entrypoints.openai.api_server \
-        --model nvidia/nv-embedqa-e5-v5 \
+        --model nvidia/NV-Embed-v2 \
         --port 8002 \
         --task embedding \
+        --gpu-memory-utilization 0.15 \
         > "$LOG_DIR/nv_embed.log" 2>&1 &
     echo "$! NV-Embed 8002" >> "$PID_FILE"
-    log "Started NV-Embed (PID: $!)"
+    log "Started NV-Embed-v2 (PID: $!)"
 fi
 
-# --- NeVA (port 8003) ---
+# --- NeVA Vision (port 8003) — NVIDIA vision model ---
 if port_in_use 8003; then
     log "SKIP: NeVA already running on port 8003"
 else
@@ -98,6 +100,7 @@ else
     python3 -m vllm.entrypoints.openai.api_server \
         --model nvidia/neva-22b \
         --port 8003 \
+        --gpu-memory-utilization 0.10 \
         > "$LOG_DIR/neva.log" 2>&1 &
     echo "$! NeVA 8003" >> "$PID_FILE"
     log "Started NeVA (PID: $!)"
@@ -149,11 +152,12 @@ cd "$PROJECT_DIR"
 # --- Wait for services ---
 log ""
 log "Waiting for services to become ready..."
-wait_for_port 8001 "vLLM" 60 || true
-wait_for_port 8002 "NV-Embed" 60 || true
-wait_for_port 8003 "NeVA" 60 || true
+log "(vLLM models can take 3-10 minutes on first load while downloading weights)"
+wait_for_port 8001 "vLLM" 600 || true
+wait_for_port 8002 "NV-Embed" 600 || true
+wait_for_port 8003 "NeVA" 600 || true
 wait_for_port 8080 "NemoClaw" 30 || true
-wait_for_port 8000 "FastAPI" 15 || true
+wait_for_port 8000 "FastAPI" 30 || true
 wait_for_port 3000 "React UI" 15 || true
 
 # --- Status table ---

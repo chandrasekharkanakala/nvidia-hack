@@ -55,7 +55,11 @@ async def process_message(
             effective_mode = route_result["mode_override"]
 
         # Plan
-        if effective_mode == "deep":
+        if intent in ("chitchat", "greeting"):
+            # No tools needed for greetings/chitchat — go straight to synthesizer
+            steps = []
+            tool_results = []
+        elif effective_mode == "deep":
             if on_event:
                 await _safe_emit(on_event, {"type": "thinking", "stage": "planning"})
             steps = await planner.create_plan(content, intent, history)
@@ -63,14 +67,22 @@ async def process_message(
             # Light mode: single tool call based on hint
             tool = route_result.get("tool_hint") or "rag_search"
             if intent == "simple_qa":
-                steps = [{"tool": "rag_search", "params": {"query": content}, "depends_on": None}]
+                # Use tool_hint if provided, otherwise try sql_query for data questions
+                if tool and tool != "rag_search":
+                    steps = [{"tool": tool, "params": {"query": content}, "depends_on": None}]
+                else:
+                    # Default: try sql_query first (structured data), fallback in tool itself
+                    steps = [{"tool": "sql_query", "params": {"query": content}, "depends_on": None}]
+            elif intent == "lookup":
+                steps = [{"tool": "sql_query", "params": {"query": content}, "depends_on": None}]
             elif intent == "vision" and image is not None:
                 steps = [{"tool": "vision", "params": {"prompt": content, "image": image}, "depends_on": None}]
             else:
                 steps = [{"tool": tool, "params": {"query": content}, "depends_on": None}]
 
-        # Execute
-        tool_results = await executor.execute_plan(steps, on_event=on_event)
+        # Execute (skip if chitchat already set tool_results)
+        if steps:
+            tool_results = await executor.execute_plan(steps, on_event=on_event)
 
         # Reflect (deep mode only)
         metrics: dict[str, Any] = {}

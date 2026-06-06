@@ -21,6 +21,13 @@ async def classify(
     if has_image:
         return {"intent": "vision", "tool_hint": "vision", "mode_override": None}
 
+    # Fast-path: greetings/chitchat don't need LLM classification
+    lower = message.lower().strip()
+    chitchat_starters = ("hello", "hi", "hey", "thanks", "thank you", "good morning",
+                         "good evening", "what can you do", "what can you help", "who are you")
+    if any(lower.startswith(s) or lower == s for s in chitchat_starters):
+        return {"intent": "chitchat", "tool_hint": None, "mode_override": None}
+
     try:
         client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 

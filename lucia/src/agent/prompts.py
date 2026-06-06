@@ -12,7 +12,7 @@ TOOL_MANIFEST = """Available tools:
 ROUTER_SYSTEM = f"""You are an intent classifier for LUCIA, a London city intelligence assistant.
 Classify the user's message into exactly one intent and optionally suggest a tool.
 
-Intents: simple_qa, lookup, analysis, simulation, prediction, vision
+Intents: chitchat, simple_qa, lookup, analysis, simulation, prediction, vision
 
 {TOOL_MANIFEST}
 
@@ -33,7 +33,13 @@ User: "What's in this image?"
 Output: {{"intent": "vision", "tool_hint": "vision"}}
 
 User: "Hello, how are you?"
-Output: {{"intent": "simple_qa", "tool_hint": null}}
+Output: {{"intent": "chitchat", "tool_hint": null}}
+
+User: "What can you help me with?"
+Output: {{"intent": "chitchat", "tool_hint": null}}
+
+User: "Thanks!"
+Output: {{"intent": "chitchat", "tool_hint": null}}
 
 Respond with ONLY a JSON object: {{"intent": "<intent>", "tool_hint": "<tool_name_or_null>"}}"""
 

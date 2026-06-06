@@ -73,7 +73,10 @@ async def websocket_chat(websocket: WebSocket):
             mode_str = message.get("mode", "chat")
 
             # Send thinking event
-            await websocket.send_json({"event": "thinking", "data": {"session_id": session_id}})
+            await websocket.send_json({"type": "thinking"})
+
+            result = None
+            response_text = ""
 
             try:
                 from agent import process_message_stream, AgentMode as _AgentMode
@@ -89,21 +92,27 @@ async def websocket_chat(websocket: WebSocket):
                 from agent import process_message, AgentMode as _AgentMode2
 
                 _mode = _AgentMode2(mode_str) if mode_str in ("light", "deep") else _AgentMode2.light
-                await websocket.send_json({"event": "tool_start", "data": {"tool": "agent"}})
+                await websocket.send_json({"type": "tool_start", "tool": "agent", "description": "Processing..."})
 
                 result = await process_message(
                     content=content, mode=_mode, session_id=session_id
                 )
 
-                await websocket.send_json({"event": "tool_end", "data": {"tool": "agent"}})
+                await websocket.send_json({"type": "tool_end", "tool": "agent", "duration_ms": result.get("metrics", {}).get("total_ms", 0), "success": True})
 
                 # Stream tokens
-                response_text = result.get("response", "")
+                response_text = result.get("content") or result.get("response", "")
                 for i in range(0, len(response_text), 10):
                     chunk = response_text[i : i + 10]
-                    await websocket.send_json({"event": "token", "data": {"text": chunk}})
+                    await websocket.send_json({"type": "token", "content": chunk})
 
-            await websocket.send_json({"event": "done", "data": {"session_id": session_id}})
+            await websocket.send_json({
+                "type": "done",
+                "metrics": {
+                    "latencyMs": result.get("metrics", {}).get("total_ms", 0) if result else 0,
+                    "tokensCompletion": len(response_text) // 4,
+                }
+            })
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")

@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     nemoclaw_url: str = "http://localhost:8080"
 
     # Model names
-    llm_model: str = "nemotron-3-nano"
+    llm_model: str = "nvidia/Nemotron-Mini-4B-Instruct"
     safety_model: str = "nemotron-content-safety-4b"
-    embed_model: str = "nv-embed-v2"
+    embed_model: str = "intfloat/e5-large-v2"
     vision_model: str = "neva-7b"
 
     # Data paths

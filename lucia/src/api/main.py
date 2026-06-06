@@ -52,6 +52,11 @@ async def lifespan(app: FastAPI):
     """)
 
     app.state.db = db
+
+    # Share DB connection with agent memory module
+    from agent import memory
+    memory.set_connection(db)
+
     logger.info("LUCIA API started, DuckDB initialized")
 
     yield

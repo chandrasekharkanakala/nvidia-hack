@@ -5,10 +5,14 @@ from datetime import datetime, timezone
 
 from config.settings import settings
 
+_con: duckdb.DuckDBPyConnection | None = None
 
-def _get_con() -> duckdb.DuckDBPyConnection:
-    con = duckdb.connect(settings.duckdb_path)
-    con.execute("""
+
+def set_connection(con: duckdb.DuckDBPyConnection) -> None:
+    """Set shared DuckDB connection (called from app startup)."""
+    global _con
+    _con = con
+    _con.execute("""
         CREATE TABLE IF NOT EXISTS chat_messages (
             session_id VARCHAR NOT NULL,
             role VARCHAR NOT NULL,
@@ -17,7 +21,22 @@ def _get_con() -> duckdb.DuckDBPyConnection:
             created_at TIMESTAMP DEFAULT current_timestamp
         )
     """)
-    return con
+
+
+def _get_con() -> duckdb.DuckDBPyConnection:
+    global _con
+    if _con is None:
+        _con = duckdb.connect(settings.duckdb_path)
+        _con.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                session_id VARCHAR NOT NULL,
+                role VARCHAR NOT NULL,
+                content TEXT NOT NULL,
+                mode VARCHAR DEFAULT 'light',
+                created_at TIMESTAMP DEFAULT current_timestamp
+            )
+        """)
+    return _con
 
 
 async def load_history(session_id: str, limit: int = 10) -> list[dict]:
@@ -45,21 +64,12 @@ async def save_message(session_id: str, role: str, content: str, mode: str) -> N
     try:
         con = _get_con()
         con.execute(
-            """INSERT INTO chat_messages (id, session_id, role, content, mode, created_at)
-               VALUES (nextval('chat_messages_id_seq'), ?, ?, ?, ?, ?)""",
+            """INSERT INTO chat_messages (session_id, role, content, mode, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
             [session_id, role, content, mode, datetime.now(timezone.utc)],
         )
     except Exception:
-        # Fallback: try without id column (table may not have it)
-        try:
-            con = _get_con()
-            con.execute(
-                """INSERT INTO chat_messages (session_id, role, content, mode, created_at)
-                   VALUES (?, ?, ?, ?, ?)""",
-                [session_id, role, content, mode, datetime.now(timezone.utc)],
-            )
-        except Exception:
-            pass
+        pass
 
 
 async def list_sessions() -> list[dict]:

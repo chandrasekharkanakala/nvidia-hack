@@ -81,14 +81,14 @@ fi
 if port_in_use 8002; then
     log "SKIP: NV-Embed already running on port 8002"
 else
-    log "Starting NV-EmbedQA-E5-V5 on port 8002..."
+    log "Starting nv-embedqa-e5-v5 on port 8002..."
     python3 -m vllm.entrypoints.openai.api_server \
-        --model nvidia/NV-EmbedQA-E5-V5 \
+        --model nvidia/nv-embedqa-e5-v5 \
         --port 8002 \
         --gpu-memory-utilization 0.15 \
         > "$LOG_DIR/nv_embed.log" 2>&1 &
     echo "$! NV-Embed 8002" >> "$PID_FILE"
-    log "Started NV-EmbedQA-E5-V5 (PID: $!)"
+    log "Started nv-embedqa-e5-v5 (PID: $!)"
 fi
 
 # --- NeVA Vision (port 8003) — DISABLED (added to backlog) ---

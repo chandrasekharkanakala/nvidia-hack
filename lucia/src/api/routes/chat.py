@@ -142,6 +142,6 @@ async def websocket_chat(websocket: WebSocket):
     except Exception as e:
         logger.exception("WebSocket error")
         try:
-            await websocket.send_json({"event": "error", "data": {"message": str(e)}})
+            await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:
             pass

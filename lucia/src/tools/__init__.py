@@ -5,7 +5,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-TOOLS = {"rag_search", "sql_query", "web_scraper", "simulator", "predictor", "vision", "calculator"}
+TOOLS = {
+    "rag_search", "sql_query", "web_scraper", "web_search",
+    "visualizer", "analyzer", "simulator", "predictor",
+    "vision", "calculator",
+}
 
 
 async def call_tool(name: str, params: dict) -> dict:
@@ -14,7 +18,7 @@ async def call_tool(name: str, params: dict) -> dict:
         return {"success": False, "data": None, "error": f"Unknown tool: {name}"}
 
     try:
-        module = importlib.import_module(f".{name}", package="src.tools")
+        module = importlib.import_module(f".{name}", package="tools")
         result = await module.execute(**params)
         return {"success": True, "data": result, "error": None}
     except Exception as e:

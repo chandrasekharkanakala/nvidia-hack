@@ -66,15 +66,6 @@ class TestRouterClassify:
     @pytest.mark.asyncio
     @patch("agent.router.AsyncOpenAI")
     async def test_vision_intent_when_image_present(self, mock_openai_cls):
-        llm = AsyncMock()
-        llm.chat.completions.create = AsyncMock(
-            return_value=MagicMock(
-                choices=[MagicMock(message=MagicMock(
-                    content='{"intent": "vision", "tool_hint": "vision", "mode_override": null}'
-                ))]
-            )
-        )
-        mock_openai_cls.return_value = llm
         from agent.router import classify
 
         result = await classify("What's in this image?", [], has_image=True)
@@ -85,17 +76,9 @@ class TestRouterClassify:
     @pytest.mark.asyncio
     @patch("agent.router.AsyncOpenAI")
     async def test_simulation_intent(self, mock_openai_cls):
-        llm = AsyncMock()
-        llm.chat.completions.create = AsyncMock(
-            return_value=MagicMock(
-                choices=[MagicMock(message=MagicMock(
-                    content='{"intent": "simulation", "tool_hint": "simulator", "mode_override": "deep"}'
-                ))]
-            )
-        )
-        mock_openai_cls.return_value = llm
         from agent.router import classify
 
+        # "Simulate" triggers fast-path
         result = await classify("Simulate closing the A40 for 3 hours during rush hour", [])
 
         assert result["intent"] == "simulation"
@@ -104,21 +87,35 @@ class TestRouterClassify:
     @pytest.mark.asyncio
     @patch("agent.router.AsyncOpenAI")
     async def test_prediction_intent(self, mock_openai_cls):
-        llm = AsyncMock()
-        llm.chat.completions.create = AsyncMock(
-            return_value=MagicMock(
-                choices=[MagicMock(message=MagicMock(
-                    content='{"intent": "prediction", "tool_hint": "predictor", "mode_override": null}'
-                ))]
-            )
-        )
-        mock_openai_cls.return_value = llm
         from agent.router import classify
 
+        # "Predict" triggers fast-path
         result = await classify("Predict traffic on the M25 for the next 24 hours", [])
 
         assert result["intent"] == "prediction"
         assert result["tool_hint"] == "predictor"
+
+    @pytest.mark.asyncio
+    @patch("agent.router.AsyncOpenAI")
+    async def test_chitchat_fast_path(self, mock_openai_cls):
+        from agent.router import classify
+
+        result = await classify("Hello, how are you?", [])
+
+        assert result["intent"] == "chitchat"
+        assert result["tool_hint"] is None
+        # LLM should NOT have been called
+        mock_openai_cls.return_value.chat.completions.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("agent.router.AsyncOpenAI")
+    async def test_lookup_fast_path(self, mock_openai_cls):
+        from agent.router import classify
+
+        result = await classify("Show me the top boroughs by crime", [])
+
+        assert result["intent"] == "lookup"
+        assert result["tool_hint"] == "sql_query"
 
     @pytest.mark.asyncio
     @patch("agent.router.AsyncOpenAI")
@@ -127,7 +124,7 @@ class TestRouterClassify:
         llm.chat.completions.create = AsyncMock(
             return_value=MagicMock(
                 choices=[MagicMock(message=MagicMock(
-                    content='{"intent": "lookup", "tool_hint": "rag_search", "mode_override": null}'
+                    content='{"intent": "lookup", "tool_hint": "rag_search"}'
                 ))]
             )
         )
@@ -138,7 +135,8 @@ class TestRouterClassify:
             {"role": "user", "content": "Tell me about cycling"},
             {"role": "assistant", "content": "Cycling is growing in London."},
         ]
-        await classify("What about last year specifically?", history)
+        # Use a query that won't match fast-path
+        await classify("elaborate on the policy implications", history)
 
         call_args = llm.chat.completions.create.call_args
         messages = call_args.kwargs.get("messages") or call_args[1].get("messages", [])
@@ -157,11 +155,31 @@ class TestRouterClassify:
         mock_openai_cls.return_value = llm
         from agent.router import classify
 
-        result = await classify("Hello there", [])
+        # Use query that doesn't match fast-path
+        result = await classify("elaborate on that point please", [])
 
         # Should return a valid dict even on parse failure
         assert "intent" in result
         assert isinstance(result["intent"], str)
+
+    @pytest.mark.asyncio
+    @patch("agent.router.AsyncOpenAI")
+    async def test_json_in_markdown_block(self, mock_openai_cls):
+        llm = AsyncMock()
+        llm.chat.completions.create = AsyncMock(
+            return_value=MagicMock(
+                choices=[MagicMock(message=MagicMock(
+                    content='Here is the classification:\n```json\n{"intent": "lookup", "tool_hint": "sql_query"}\n```'
+                ))]
+            )
+        )
+        mock_openai_cls.return_value = llm
+        from agent.router import classify
+
+        result = await classify("elaborate on borough demographics", [])
+
+        assert result["intent"] == "lookup"
+        assert result["tool_hint"] == "sql_query"
 
     @pytest.mark.asyncio
     @patch("agent.router.AsyncOpenAI")
@@ -170,14 +188,15 @@ class TestRouterClassify:
         llm.chat.completions.create = AsyncMock(
             return_value=MagicMock(
                 choices=[MagicMock(message=MagicMock(
-                    content='{"intent": "simple_qa", "tool_hint": "rag_search", "mode_override": null}'
+                    content='{"intent": "simple_qa", "tool_hint": "rag_search"}'
                 ))]
             )
         )
         mock_openai_cls.return_value = llm
         from agent.router import classify
 
-        result = await classify("What is the congestion charge?", [])
+        # Use a query that won't match fast-path
+        result = await classify("explain the congestion charge policy", [])
 
         assert result["intent"] == "simple_qa"
         assert result["tool_hint"] == "rag_search"

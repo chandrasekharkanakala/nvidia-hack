@@ -81,10 +81,10 @@ class TestPlannerCreatePlan:
 
         steps = await create_plan("Something", intent="lookup", history=[])
 
-        # Should fallback to single RAG search
+        # Should fallback to single sql_query
         assert isinstance(steps, list)
         assert len(steps) >= 1
-        assert steps[0]["tool"] == "rag_search"
+        assert steps[0]["tool"] == "sql_query"
 
     @pytest.mark.asyncio
     @patch("agent.planner.AsyncOpenAI")

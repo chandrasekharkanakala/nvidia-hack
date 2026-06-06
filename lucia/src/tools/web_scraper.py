@@ -1,4 +1,4 @@
-"""Web scraper tool — fetch live data from external APIs."""
+"""Web scraper tool — fetch live data from external APIs and URLs."""
 
 import logging
 from datetime import datetime, timezone
@@ -15,13 +15,44 @@ SOURCES = {
     "tfl_road": "https://api.tfl.gov.uk/Road",
     "tfl_air_quality": "https://api.tfl.gov.uk/AirQuality",
     "tfl_bikes": "https://api.tfl.gov.uk/BikePoint",
+    "tfl_tube_status": "https://api.tfl.gov.uk/Line/Mode/tube/Status",
+    "tfl_bus_status": "https://api.tfl.gov.uk/Line/Mode/bus/Status",
+}
+
+# Keyword-to-source mapping for natural language routing
+SOURCE_KEYWORDS = {
+    "weather": ["weather", "temperature", "rain", "wind", "forecast"],
+    "tfl_disruptions": ["disruption", "road closure", "traffic delay"],
+    "tfl_road": ["road status", "road condition", "traffic"],
+    "tfl_air_quality": ["air quality", "pollution", "pm2.5", "no2"],
+    "tfl_bikes": ["bike", "cycle hire", "santander cycle", "bike point"],
+    "tfl_tube_status": ["tube", "underground", "line status", "tube status"],
+    "tfl_bus_status": ["bus status", "bus delay"],
 }
 
 
-async def execute(source: str, params: dict = None) -> dict:
-    """Fetch live data from external sources."""
+def _infer_source(query: str) -> str | None:
+    """Infer the best data source from natural language query."""
+    lower = query.lower()
+    for source, keywords in SOURCE_KEYWORDS.items():
+        if any(kw in lower for kw in keywords):
+            return source
+    return None
+
+
+async def execute(query: str = "", source: str = "", params: dict = None) -> dict:
+    """Fetch live data from external sources.
+
+    Can be called with:
+        - source="tfl_disruptions" (explicit source)
+        - query="What's the tube status?" (auto-detect source from NL)
+    """
+    # Auto-detect source from query if not specified
+    if not source and query:
+        source = _infer_source(query) or "tfl_disruptions"
+
     if source not in SOURCES:
-        return {"source": source, "data": None, "fetched_at": None, "error": f"Unknown source: {source}"}
+        return {"source": source, "data": None, "fetched_at": None, "error": f"Unknown source: {source}. Available: {list(SOURCES.keys())}"}
 
     params = params or {}
 
@@ -46,14 +77,20 @@ async def execute(source: str, params: dict = None) -> dict:
                 resp = await client.get(url, params=params)
 
             resp.raise_for_status()
-            if resp.status_code >= 400:
-                return {"source": source, "data": None, "fetched_at": None, "error": f"HTTP {resp.status_code}"}
             data = resp.json()
+
+        # Truncate large responses for readability
+        if isinstance(data, list) and len(data) > 20:
+            data = data[:20]
+            truncated = True
+        else:
+            truncated = False
 
         return {
             "source": source,
             "data": data,
             "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "truncated": truncated,
             "error": None,
         }
 

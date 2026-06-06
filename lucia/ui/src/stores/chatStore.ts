@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { getGlobalWs } from "../lib/wsRef";
 import type { Message, Session, AgentMode, MessageMetrics } from "../types";
 
@@ -22,9 +23,13 @@ interface ChatState {
   updateLastAssistantMessage: (update: Partial<Message>) => void;
   finishMessage: (metrics: MessageMetrics) => void;
   startThinking: () => void;
+  fetchSessions: () => Promise<void>;
+  fetchMessages: (sessionId: string) => Promise<void>;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
   sessions: [],
   activeSessionId: null,
   messages: [],
@@ -81,7 +86,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   loadSession: (id) => {
-    set({ activeSessionId: id });
+    set({ activeSessionId: id, messages: [] });
+    // Fetch messages from backend
+    get().fetchMessages(id);
   },
 
   setSessions: (sessions) => set({ sessions }),
@@ -151,4 +158,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return { messages: msgs };
     });
   },
-}));
+
+  fetchSessions: async () => {
+    try {
+      const res = await fetch("/sessions");
+      if (res.ok) {
+        const data = await res.json();
+        const sessions = data.sessions || data;
+        set({ sessions });
+      }
+    } catch {
+      // Backend may not be available yet
+    }
+  },
+
+  fetchMessages: async (sessionId: string) => {
+    try {
+      const res = await fetch(`/sessions/${sessionId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        const messages = data.messages || data;
+        set({ messages, activeSessionId: sessionId });
+      }
+    } catch {
+      // Backend may not be available
+    }
+  },
+}),
+    {
+      name: "lucia-chat-store",
+      partialize: (state) => ({
+        sessions: state.sessions,
+        activeSessionId: state.activeSessionId,
+        messages: state.messages,
+        mode: state.mode,
+      }),
+    }
+  )
+);

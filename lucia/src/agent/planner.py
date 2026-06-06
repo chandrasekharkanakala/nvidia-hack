@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 from openai import AsyncOpenAI
 
@@ -9,6 +10,47 @@ from config.settings import settings
 from agent.prompts import PLANNER_SYSTEM
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_json_array(text: str) -> list | None:
+    """Robustly extract a JSON array from LLM output."""
+    # Try direct parse
+    try:
+        result = json.loads(text)
+        return result if isinstance(result, list) else [result]
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Try extracting JSON array
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if match:
+        try:
+            result = json.loads(match.group())
+            return result if isinstance(result, list) else [result]
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Try from markdown code block
+    match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Last resort: find individual tool objects
+    objects = re.findall(r'\{[^{}]*"tool"[^{}]*\}', text)
+    if objects:
+        steps = []
+        for obj in objects:
+            try:
+                steps.append(json.loads(obj))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        if steps:
+            return steps
+
+    return None
 
 
 async def create_plan(
@@ -37,13 +79,11 @@ async def create_plan(
         )
 
         raw = response.choices[0].message.content.strip()
-        # Extract JSON array
-        if "[" in raw:
-            raw = raw[raw.index("["):raw.rindex("]") + 1]
-        steps = json.loads(raw)
+        steps = _extract_json_array(raw)
 
-        if not isinstance(steps, list):
-            steps = [steps]
+        if steps is None:
+            logger.warning(f"Planner: could not parse JSON from: {raw[:100]}")
+            return [{"tool": "sql_query", "params": {"query": message}, "depends_on": None}]
 
         # Enforce max steps
         steps = steps[: settings.deep_max_steps]
@@ -53,7 +93,7 @@ async def create_plan(
         for step in steps:
             validated.append({
                 "tool": step.get("tool", "rag_search"),
-                "params": step.get("params", {}),
+                "params": step.get("params", {"query": message}),
                 "depends_on": step.get("depends_on"),
             })
 
@@ -61,5 +101,4 @@ async def create_plan(
 
     except Exception as e:
         logger.warning(f"Planner failed: {e}")
-        # Fallback: single RAG search
-        return [{"tool": "rag_search", "params": {"query": message}, "depends_on": None}]
+        return [{"tool": "sql_query", "params": {"query": message}, "depends_on": None}]

@@ -65,15 +65,16 @@ async def process_message(
             steps = await planner.create_plan(content, intent, history)
         else:
             # Light mode: single tool call based on hint
-            tool = route_result.get("tool_hint") or "rag_search"
-            if intent == "simple_qa":
-                # Use tool_hint if provided, otherwise try sql_query for data questions
-                if tool and tool != "rag_search":
-                    steps = [{"tool": tool, "params": {"query": content}, "depends_on": None}]
-                else:
-                    # Default: try sql_query first (structured data), fallback in tool itself
-                    steps = [{"tool": "sql_query", "params": {"query": content}, "depends_on": None}]
-            elif intent == "lookup":
+            tool = route_result.get("tool_hint") or "sql_query"
+            if intent == "visualization":
+                steps = [{"tool": "visualizer", "params": {"query": content}, "depends_on": None}]
+            elif intent == "analysis":
+                steps = [{"tool": "analyzer", "params": {"query": content}, "depends_on": None}]
+            elif intent == "web_search":
+                steps = [{"tool": "web_search", "params": {"query": content}, "depends_on": None}]
+            elif intent == "lookup" and tool == "web_scraper":
+                steps = [{"tool": "web_scraper", "params": {"query": content}, "depends_on": None}]
+            elif intent in ("lookup", "simple_qa"):
                 steps = [{"tool": "sql_query", "params": {"query": content}, "depends_on": None}]
             elif intent == "vision" and image is not None:
                 steps = [{"tool": "vision", "params": {"prompt": content, "image": image}, "depends_on": None}]

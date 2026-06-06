@@ -3,7 +3,10 @@
 import logging
 import subprocess
 
+import duckdb
 from fastapi import APIRouter, Request
+
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -13,7 +16,9 @@ router = APIRouter()
 async def get_metrics(request: Request):
     """Get aggregate stats from DuckDB metrics table."""
     try:
-        db = request.app.state.db
+        db = getattr(request.app.state, "db", None)
+        if db is None:
+            db = duckdb.connect(settings.duckdb_path, read_only=True)
         result = db.execute("""
             SELECT
                 COUNT(*) as total_requests,

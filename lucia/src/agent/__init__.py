@@ -5,7 +5,7 @@ import time
 from enum import Enum
 from typing import Any, Callable
 
-from src.agent import executor, memory, planner, reflector, router, synthesizer
+from agent import executor, memory, planner, reflector, router, synthesizer
 
 logger = logging.getLogger(__name__)
 

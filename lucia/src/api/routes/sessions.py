@@ -12,7 +12,7 @@ router = APIRouter()
 async def list_sessions():
     """List all chat sessions."""
     try:
-        from src.agent import memory
+        from agent import memory
 
         sessions = await memory.list_sessions()
         return {"sessions": sessions}
@@ -25,7 +25,7 @@ async def list_sessions():
 async def get_session_messages(session_id: str):
     """Get message history for a session."""
     try:
-        from src.agent import memory
+        from agent import memory
 
         messages = await memory.load_history(session_id)
         return {"session_id": session_id, "messages": messages}
@@ -38,7 +38,7 @@ async def get_session_messages(session_id: str):
 async def delete_session(session_id: str):
     """Delete a session and its history."""
     try:
-        from src.agent import memory
+        from agent import memory
 
         await memory.delete_session(session_id)
         return {"deleted": True, "session_id": session_id}

@@ -6,11 +6,9 @@ import logging
 from openai import AsyncOpenAI
 
 from config.settings import settings
-from src.agent.prompts import ROUTER_SYSTEM
+from agent.prompts import ROUTER_SYSTEM
 
 logger = logging.getLogger(__name__)
-
-client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 
 
 async def classify(
@@ -24,6 +22,8 @@ async def classify(
         return {"intent": "vision", "tool_hint": "vision", "mode_override": None}
 
     try:
+        client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
+
         messages = [{"role": "system", "content": ROUTER_SYSTEM}]
         for msg in history[-4:]:
             messages.append({"role": msg["role"], "content": msg["content"]})

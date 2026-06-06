@@ -6,11 +6,9 @@ import logging
 from openai import AsyncOpenAI
 
 from config.settings import settings
-from src.agent.prompts import REFLECTOR_SYSTEM
+from agent.prompts import REFLECTOR_SYSTEM
 
 logger = logging.getLogger(__name__)
-
-client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 
 
 async def validate(query: str, tool_results: list[dict]) -> dict:
@@ -19,6 +17,8 @@ async def validate(query: str, tool_results: list[dict]) -> dict:
     Returns: {confidence: float, grounded: bool, issues: list[str], retry: bool}
     """
     try:
+        client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
+
         # Summarize tool results for the reflector
         results_summary = []
         for i, r in enumerate(tool_results):
@@ -26,7 +26,7 @@ async def validate(query: str, tool_results: list[dict]) -> dict:
                 data_preview = str(r["data"])[:500]
                 results_summary.append(f"[{i+1}] {r['tool']}: {data_preview}")
             else:
-                results_summary.append(f"[{i+1}] {r['tool']}: FAILED — {r['error']}")
+                results_summary.append(f"[{i+1}] {r['tool']}: FAILED — {r.get('error', 'unknown')}")
 
         user_content = (
             f"Query: {query}\n\n"

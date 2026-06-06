@@ -46,12 +46,15 @@ async def execute(source: str, params: dict = None) -> dict:
                 resp = await client.get(url, params=params)
 
             resp.raise_for_status()
+            if resp.status_code >= 400:
+                return {"source": source, "data": None, "fetched_at": None, "error": f"HTTP {resp.status_code}"}
             data = resp.json()
 
         return {
             "source": source,
             "data": data,
             "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "error": None,
         }
 
     except httpx.HTTPStatusError as e:

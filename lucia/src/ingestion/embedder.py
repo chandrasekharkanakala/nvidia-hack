@@ -3,8 +3,8 @@
 import logging
 from pathlib import Path
 
+import httpx
 import numpy as np
-from openai import AsyncOpenAI
 
 from config.settings import settings
 
@@ -49,23 +49,20 @@ def chunk_text(text: str, max_tokens: int = 256, overlap: int = 32) -> list[str]
 async def embed_texts(texts: list[str]) -> np.ndarray:
     """Batch embed texts via NV-Embed-v2. Returns array of shape (n, dim)."""
     try:
-        client = AsyncOpenAI(
-            base_url="http://localhost:8002/v1",
-            api_key="not-needed",
-        )
-
-        # Process in batches to avoid overloading
         batch_size = 32
         all_embeddings = []
 
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
-            response = await client.embeddings.create(
-                model="NV-Embed-v2",
-                input=batch,
-            )
-            batch_embeddings = [item.embedding for item in response.data]
-            all_embeddings.extend(batch_embeddings)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i : i + batch_size]
+                response = await client.post(
+                    f"{settings.embed_base_url}/embeddings",
+                    json={"model": "NV-Embed-v2", "input": batch},
+                )
+                response.raise_for_status()
+                data = response.json()
+                batch_embeddings = [item["embedding"] for item in data["data"]]
+                all_embeddings.extend(batch_embeddings)
 
         return np.array(all_embeddings, dtype=np.float32)
 

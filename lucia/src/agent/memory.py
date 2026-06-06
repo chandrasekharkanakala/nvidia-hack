@@ -5,43 +5,20 @@ from datetime import datetime, timezone
 
 from config.settings import settings
 
-_CON: duckdb.DuckDBPyConnection | None = None
-
 
 def _get_con() -> duckdb.DuckDBPyConnection:
-    global _CON
-    if _CON is None:
-        _CON = duckdb.connect(settings.duckdb_path)
-        _CON.execute("""
-            CREATE TABLE IF NOT EXISTS chat_messages (
-                id INTEGER PRIMARY KEY DEFAULT nextval('chat_messages_seq'),
-                session_id VARCHAR NOT NULL,
-                role VARCHAR NOT NULL,
-                content TEXT NOT NULL,
-                mode VARCHAR DEFAULT 'light',
-                created_at TIMESTAMP DEFAULT current_timestamp
-            )
-        """)
-        _CON.execute("CREATE SEQUENCE IF NOT EXISTS chat_messages_seq START 1")
-    return _CON
-
-
-def _ensure_table() -> None:
-    con = _get_con()
-    try:
-        con.execute("SELECT 1 FROM chat_messages LIMIT 0")
-    except duckdb.CatalogException:
-        con.execute("""
-            CREATE SEQUENCE IF NOT EXISTS chat_messages_seq START 1;
-            CREATE TABLE chat_messages (
-                id INTEGER PRIMARY KEY DEFAULT nextval('chat_messages_seq'),
-                session_id VARCHAR NOT NULL,
-                role VARCHAR NOT NULL,
-                content TEXT NOT NULL,
-                mode VARCHAR DEFAULT 'light',
-                created_at TIMESTAMP DEFAULT current_timestamp
-            )
-        """)
+    con = duckdb.connect(settings.duckdb_path)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY,
+            session_id VARCHAR NOT NULL,
+            role VARCHAR NOT NULL,
+            content TEXT NOT NULL,
+            mode VARCHAR DEFAULT 'light',
+            created_at TIMESTAMP DEFAULT current_timestamp
+        )
+    """)
+    return con
 
 
 async def load_history(session_id: str, limit: int = 10) -> list[dict]:

@@ -6,11 +6,9 @@ from typing import Callable
 from openai import AsyncOpenAI
 
 from config.settings import settings
-from src.agent.prompts import SYNTHESIZER_DEEP, SYNTHESIZER_LIGHT
+from agent.prompts import SYNTHESIZER_DEEP, SYNTHESIZER_LIGHT
 
 logger = logging.getLogger(__name__)
-
-client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 
 
 def _build_context(tool_results: list[dict]) -> str:
@@ -30,10 +28,9 @@ async def generate(
     mode: str,
     on_token: Callable | None = None,
 ) -> str:
-    """Generate the final response, streaming tokens via on_token callback.
+    """Generate the final response, streaming tokens via on_token callback."""
+    client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 
-    Uses SYNTHESIZER_LIGHT or SYNTHESIZER_DEEP based on mode.
-    """
     system_prompt = SYNTHESIZER_DEEP if mode == "deep" else SYNTHESIZER_LIGHT
     context = _build_context(tool_results)
     temperature = settings.deep_temperature if mode == "deep" else settings.light_temperature
@@ -51,7 +48,7 @@ async def generate(
 
     try:
         full_response = ""
-        stream = await client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=settings.llm_model,
             messages=messages,
             temperature=temperature,
@@ -59,15 +56,20 @@ async def generate(
             stream=True,
         )
 
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                token = chunk.choices[0].delta.content
-                full_response += token
-                if on_token:
-                    try:
-                        await on_token(token)
-                    except Exception:
-                        pass
+        # Handle both streaming (async iterator) and non-streaming responses
+        if hasattr(response, "__aiter__"):
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    token = chunk.choices[0].delta.content
+                    full_response += token
+                    if on_token:
+                        try:
+                            await on_token(token)
+                        except Exception:
+                            pass
+        else:
+            # Non-streaming response
+            full_response = response.choices[0].message.content or ""
 
         return full_response.strip() if full_response else "I wasn't able to generate a response. Please try again."
 

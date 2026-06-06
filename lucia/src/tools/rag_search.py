@@ -4,8 +4,8 @@ import json
 import logging
 from pathlib import Path
 
+import httpx
 import numpy as np
-from openai import AsyncOpenAI
 
 from config.settings import settings
 
@@ -53,16 +53,15 @@ async def execute(query: str, top_k: int = 10) -> dict:
         if _index is None:
             return {"results": [], "error": "FAISS index not available"}
 
-        embed_client = AsyncOpenAI(
-            base_url=f"http://localhost:8002/v1",
-            api_key="not-needed",
-        )
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                f"{settings.embed_base_url}/embeddings",
+                json={"model": "NV-Embed-v2", "input": [query]},
+            )
+            response.raise_for_status()
+            data = response.json()
 
-        response = await embed_client.embeddings.create(
-            model="NV-Embed-v2",
-            input=[query],
-        )
-        query_vector = np.array([response.data[0].embedding], dtype=np.float32)
+        query_vector = np.array([data["data"][0]["embedding"]], dtype=np.float32)
 
         distances, indices = _index.search(query_vector, top_k)
 
@@ -77,7 +76,7 @@ async def execute(query: str, top_k: int = 10) -> dict:
                 "source": meta.get("source", "unknown"),
             })
 
-        return {"results": results}
+        return {"results": results, "error": None}
 
     except Exception as e:
         logger.exception("RAG search failed")

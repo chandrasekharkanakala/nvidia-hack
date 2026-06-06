@@ -114,7 +114,7 @@ def test_db():
 async def test_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     """httpx AsyncClient with ASGI transport against FastAPI app."""
     try:
-        from app.main import app
+        from api.main import app
 
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

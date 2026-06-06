@@ -52,7 +52,7 @@ async def execute(metric: str, road: str, horizon_hours: int = 24) -> dict:
             try:
                 result = conn.execute(query, [road, road])
                 rows = result.fetchall()
-            except duckdb.Error:
+            except Exception:
                 # Fallback: try generic metrics table
                 query = """
                     SELECT value, timestamp
@@ -64,7 +64,7 @@ async def execute(metric: str, road: str, horizon_hours: int = 24) -> dict:
                 try:
                     result = conn.execute(query, [metric, road])
                     rows = result.fetchall()
-                except duckdb.Error:
+                except Exception:
                     rows = []
         finally:
             conn.close()

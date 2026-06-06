@@ -8,8 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import settings
-from src.api.middleware import RequestLoggingMiddleware
-from src.api.routes import chat, metrics, sessions, voice
+from api.middleware import RequestLoggingMiddleware
+from api.routes import chat, metrics, sessions, voice
 
 logger = logging.getLogger(__name__)
 

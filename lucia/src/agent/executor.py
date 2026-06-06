@@ -11,25 +11,25 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 TOOL_MODULE_MAP = {
-    "rag_search": "src.tools.rag_search",
-    "sql_query": "src.tools.sql_query",
-    "web_scraper": "src.tools.web_scraper",
-    "simulator": "src.tools.simulator",
-    "predictor": "src.tools.predictor",
-    "vision": "src.tools.vision",
-    "calculator": "src.tools.calculator",
+    "rag_search": "tools.rag_search",
+    "sql_query": "tools.sql_query",
+    "web_scraper": "tools.web_scraper",
+    "simulator": "tools.simulator",
+    "predictor": "tools.predictor",
+    "vision": "tools.vision",
+    "calculator": "tools.calculator",
 }
 
 
 def _load_tool(tool_name: str) -> Any:
-    """Dynamically import a tool module and return its run function."""
+    """Dynamically import a tool module and return its execute function."""
     module_path = TOOL_MODULE_MAP.get(tool_name)
     if not module_path:
         raise ValueError(f"Unknown tool: {tool_name}")
     module = importlib.import_module(module_path)
-    if not hasattr(module, "run"):
-        raise AttributeError(f"Tool module {module_path} has no 'run' function")
-    return module.run
+    if not hasattr(module, "execute"):
+        raise AttributeError(f"Tool module {module_path} has no 'execute' function")
+    return module.execute
 
 
 async def _execute_step(tool_name: str, params: dict) -> dict:

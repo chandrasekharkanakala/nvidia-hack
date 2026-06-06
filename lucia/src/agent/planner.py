@@ -6,11 +6,9 @@ import logging
 from openai import AsyncOpenAI
 
 from config.settings import settings
-from src.agent.prompts import PLANNER_SYSTEM
+from agent.prompts import PLANNER_SYSTEM
 
 logger = logging.getLogger(__name__)
-
-client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
 
 
 async def create_plan(
@@ -21,6 +19,8 @@ async def create_plan(
     Returns: list of {tool: str, params: dict, depends_on: int|None}
     """
     try:
+        client = AsyncOpenAI(base_url=settings.vllm_base_url, api_key="not-needed")
+
         messages = [{"role": "system", "content": PLANNER_SYSTEM}]
         for msg in history[-4:]:
             messages.append({"role": msg["role"], "content": msg["content"]})

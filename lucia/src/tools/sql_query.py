@@ -31,7 +31,7 @@ async def execute(question: str) -> dict:
     """Generate SQL from natural language and execute on DuckDB."""
     try:
         llm_client = AsyncOpenAI(
-            base_url=f"http://localhost:{settings.llm_port}/v1",
+            base_url=settings.vllm_base_url,
             api_key="not-needed",
         )
 
@@ -66,13 +66,14 @@ async def execute(question: str) -> dict:
                 "columns": columns,
                 "rows": rows,
                 "row_count": len(rows),
+                "error": None,
             }
         finally:
             conn.close()
 
-    except duckdb.Error as e:
-        logger.error(f"DuckDB error: {e}")
-        return {"sql": sql if "sql" in dir() else "", "columns": [], "rows": [], "row_count": 0, "error": str(e)}
     except Exception as e:
+        if "sql" in dir() and sql:
+            logger.error(f"DuckDB error: {e}")
+            return {"sql": sql, "columns": [], "rows": [], "row_count": 0, "error": str(e)}
         logger.exception("SQL query tool failed")
         return {"sql": "", "columns": [], "rows": [], "row_count": 0, "error": str(e)}

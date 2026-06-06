@@ -29,8 +29,11 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest):
     """Process a chat message through the LUCIA agent."""
+    if not body.content.strip():
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"detail": "content must not be empty"})
     try:
-        from src.agent import process_message
+        from agent import process_message
 
         session_id = body.session_id or str(uuid.uuid4())
 
@@ -41,9 +44,9 @@ async def chat(request: Request, body: ChatRequest):
         )
 
         return ChatResponse(
-            response=result.get("response", ""),
+            response=result.get("response") or result.get("content", ""),
             session_id=session_id,
-            tools_used=result.get("tools_used", []),
+            tools_used=result.get("tools_used") or [t.get("tool", t) if isinstance(t, dict) else t for t in result.get("tool_calls", [])],
             thinking=result.get("thinking"),
         )
     except Exception as e:
@@ -73,7 +76,7 @@ async def websocket_chat(websocket: WebSocket):
             await websocket.send_json({"event": "thinking", "data": {"session_id": session_id}})
 
             try:
-                from src.agent import process_message_stream
+                from agent import process_message_stream
 
                 async for event in process_message_stream(
                     content=content, mode=mode, session_id=session_id
@@ -82,7 +85,7 @@ async def websocket_chat(websocket: WebSocket):
 
             except ImportError:
                 # Fallback if streaming not implemented
-                from src.agent import process_message
+                from agent import process_message
 
                 await websocket.send_json({"event": "tool_start", "data": {"tool": "agent"}})
 

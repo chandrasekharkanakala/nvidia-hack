@@ -260,6 +260,82 @@ def extract_text_chunks(df: pd.DataFrame, text_columns: list[str], table_name: s
     return chunks
 
 
+def generate_table_summary_chunks(df: pd.DataFrame, config) -> list[dict]:
+    """Generate summary chunks for a table — helps RAG answer 'what data do you have?' questions."""
+    chunks = []
+    cols = list(df.columns)
+    row_count = len(df)
+
+    # Table overview chunk
+    overview = (
+        f"Dataset: {config.description}. "
+        f"Table name: {config.table_name}. "
+        f"Contains {row_count} rows with columns: {', '.join(cols[:15])}. "
+    )
+
+    # Add numeric stats
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    if numeric_cols:
+        stats_parts = []
+        for col in numeric_cols[:5]:
+            try:
+                stats_parts.append(f"{col}: min={df[col].min():.1f}, max={df[col].max():.1f}, avg={df[col].mean():.1f}")
+            except Exception:
+                pass
+        if stats_parts:
+            overview += "Key stats: " + "; ".join(stats_parts) + ". "
+
+    # Add unique values for categorical columns
+    cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+    for col in cat_cols[:3]:
+        try:
+            uniques = df[col].dropna().unique()
+            if 2 <= len(uniques) <= 20:
+                overview += f"{col} values: {', '.join(str(u) for u in uniques[:10])}. "
+        except Exception:
+            pass
+
+    chunks.append({
+        "id": f"{config.table_name}_summary",
+        "text": overview[:512],
+        "source_table": config.table_name,
+        "source_column": "_summary",
+        "source_row": -1,
+    })
+
+    # Borough list chunk (if borough column exists)
+    borough_cols = [c for c in cols if 'borough' in c.lower() or 'area' in c.lower() or 'authority' in c.lower()]
+    if borough_cols:
+        boroughs = df[borough_cols[0]].dropna().unique()
+        if len(boroughs) > 1:
+            chunks.append({
+                "id": f"{config.table_name}_boroughs",
+                "text": f"The {config.table_name} dataset covers these areas: {', '.join(str(b) for b in sorted(boroughs)[:33])}.",
+                "source_table": config.table_name,
+                "source_column": "_boroughs",
+                "source_row": -1,
+            })
+
+    # Time range chunk (if year/date column exists)
+    time_cols = [c for c in cols if any(t in c.lower() for t in ('year', 'date', 'period', 'month'))]
+    if time_cols:
+        try:
+            time_col = time_cols[0]
+            time_min = df[time_col].min()
+            time_max = df[time_col].max()
+            chunks.append({
+                "id": f"{config.table_name}_timerange",
+                "text": f"The {config.table_name} dataset covers the time period from {time_min} to {time_max}.",
+                "source_table": config.table_name,
+                "source_column": "_timerange",
+                "source_row": -1,
+            })
+        except Exception:
+            pass
+
+    return chunks
+
+
 def embed_chunks(chunks: list[dict]) -> Optional[np.ndarray]:
     """Generate embeddings for text chunks. Returns None if service unavailable."""
     if not chunks:
@@ -425,14 +501,21 @@ def run_ingestion(force: bool = False) -> None:
                 ingest_to_duckdb(con, config, df, force=force)
 
             # Phase 2: Extract text chunks for embedding
-            if embedding_available and config.route in (RoutePath.B, RoutePath.AB):
-                chunks = extract_text_chunks(df, config.text_columns, config.table_name)
-                if chunks:
-                    logger.info(f"Extracted {len(chunks)} text chunks from {config.table_name}")
-                    # Remove old chunks from same table (replace, don't duplicate)
-                    all_chunks = [c for c in all_chunks if c.get("source_table") != config.table_name]
-                    all_chunks.extend(chunks)
-                    new_chunks_added = True
+            if embedding_available:
+                # Always generate table summary chunks (for all route types)
+                summary_chunks = generate_table_summary_chunks(df, config)
+                # Remove old summary chunks from same table
+                all_chunks = [c for c in all_chunks if not (c.get("source_table") == config.table_name and c.get("source_column", "").startswith("_"))]
+                all_chunks.extend(summary_chunks)
+                new_chunks_added = True
+
+                # Also extract row-level text chunks for B and AB routes
+                if config.route in (RoutePath.B, RoutePath.AB):
+                    chunks = extract_text_chunks(df, config.text_columns, config.table_name)
+                    if chunks:
+                        logger.info(f"Extracted {len(chunks)} text chunks from {config.table_name}")
+                        all_chunks = [c for c in all_chunks if not (c.get("source_table") == config.table_name and not c.get("source_column", "").startswith("_"))]
+                        all_chunks.extend(chunks)
 
             # Update hash registry
             hash_registry[config.filename] = current_hash

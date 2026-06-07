@@ -55,14 +55,84 @@ Rules:
 - Always LIMIT to 50 rows.
 - If unsure which table to use, pick the most relevant one based on the question topic.
 - For borough comparisons, GROUP BY the borough column and ORDER BY the metric DESC.
+
+Examples of correct queries:
+{few_shots}
 """
+
+# Few-shot examples that teach the LLM correct SQL patterns for our data
+FEW_SHOT_EXAMPLES = [
+    {
+        "question": "Which borough has the highest traffic volume?",
+        "sql": "SELECT borough, SUM(all_vehicles_km) as total_km FROM traffic_flows GROUP BY borough ORDER BY total_km DESC LIMIT 10"
+    },
+    {
+        "question": "How many licensed vehicles are there in Westminster?",
+        "sql": "SELECT * FROM licensed_vehicles WHERE borough ILIKE '%westminster%' LIMIT 20"
+    },
+    {
+        "question": "Show me cycle hire trends",
+        "sql": "SELECT * FROM cycle_hires ORDER BY day DESC LIMIT 30"
+    },
+    {
+        "question": "Compare air quality across boroughs",
+        "sql": "SELECT borough, AVG(no2) as avg_no2, AVG(pm25) as avg_pm25 FROM air_quality_gla GROUP BY borough ORDER BY avg_no2 DESC LIMIT 20"
+    },
+    {
+        "question": "What are the crime rates by borough?",
+        "sql": "SELECT borough, COUNT(*) as incidents FROM crime GROUP BY borough ORDER BY incidents DESC LIMIT 15"
+    },
+    {
+        "question": "Show fire incidents by type",
+        "sql": "SELECT incident_type, COUNT(*) as count FROM fire_incidents GROUP BY incident_type ORDER BY count DESC LIMIT 20"
+    },
+    {
+        "question": "How much fly-tipping in Hackney?",
+        "sql": "SELECT * FROM fly_tipping WHERE borough ILIKE '%hackney%' LIMIT 20"
+    },
+    {
+        "question": "What public transport accessibility levels exist?",
+        "sql": "SELECT * FROM ptals LIMIT 30"
+    },
+    {
+        "question": "Compare congestion charge data over time",
+        "sql": "SELECT year, SUM(vehicles) as total_vehicles FROM congestion_charge GROUP BY year ORDER BY year LIMIT 30"
+    },
+    {
+        "question": "Show me greenhouse gas emissions by borough",
+        "sql": "SELECT borough, SUM(emissions) as total FROM ghg_emissions GROUP BY borough ORDER BY total DESC LIMIT 15"
+    },
+]
+
+
+def _format_few_shots(question: str) -> str:
+    """Select relevant few-shot examples based on the question."""
+    lower_q = question.lower()
+    # Score each example by keyword overlap
+    scored = []
+    for ex in FEW_SHOT_EXAMPLES:
+        score = sum(1 for word in ex["question"].lower().split() if word in lower_q and len(word) > 3)
+        scored.append((score, ex))
+    # Take top 3 most relevant + always include 1 random for diversity
+    scored.sort(key=lambda x: -x[0])
+    selected = [ex for _, ex in scored[:3]]
+    # Add one more if we don't have 3 relevant ones
+    if scored[2][0] == 0:
+        selected = [ex for _, ex in scored[:2]] + [FEW_SHOT_EXAMPLES[0]]
+
+    lines = []
+    for ex in selected:
+        lines.append(f"Q: {ex['question']}\nSQL: {ex['sql']}")
+    return "\n\n".join(lines)
+
 
 
 async def execute(question: str) -> dict:
     """Generate SQL from natural language and execute on DuckDB."""
     try:
         schema = _get_schema_context()
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(schema=schema)
+        few_shots = _format_few_shots(question)
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(schema=schema, few_shots=few_shots)
 
         llm_client = AsyncOpenAI(
             base_url=settings.vllm_base_url,

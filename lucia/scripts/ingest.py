@@ -343,12 +343,12 @@ def run_ingestion(force: bool = False) -> None:
     logger.info(f"Raw data directory: {RAW_DIR}")
     logger.info(f"Database path: {DB_PATH}")
 
-    # Discover all data files
+    # Discover all data files (recursive — includes subfolders from unzipped archives)
     supported_exts = ("*.csv", "*.xlsx", "*.xls", "*.json", "*.geojson")
     raw_files = []
     for ext in supported_exts:
-        raw_files.extend(RAW_DIR.glob(ext))
-    logger.info(f"Found {len(raw_files)} data files in data/raw/")
+        raw_files.extend(RAW_DIR.rglob(ext))
+    logger.info(f"Found {len(raw_files)} data files in data/raw/ (including subfolders)")
 
     if not raw_files:
         logger.warning("No data files found. Download data to data/raw/ first.")

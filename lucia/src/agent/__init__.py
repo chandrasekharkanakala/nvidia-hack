@@ -73,13 +73,24 @@ async def process_message(
             elif intent == "web_search":
                 steps = [{"tool": "web_search", "params": {"query": content}, "depends_on": None}]
             elif intent == "lookup" and tool == "web_scraper":
-                steps = [{"tool": "web_scraper", "params": {"query": content}, "depends_on": None}]
+                steps = [
+                    {"tool": "web_scraper", "params": {"query": content}, "depends_on": None},
+                    {"tool": "rag_search", "params": {"query": content}, "depends_on": None},
+                ]
             elif intent in ("lookup", "simple_qa"):
-                steps = [{"tool": "sql_query", "params": {"query": content}, "depends_on": None}]
+                # Use BOTH SQL + RAG for richer context
+                steps = [
+                    {"tool": "sql_query", "params": {"query": content}, "depends_on": None},
+                    {"tool": "rag_search", "params": {"query": content}, "depends_on": None},
+                ]
             elif intent == "vision" and image is not None:
                 steps = [{"tool": "vision", "params": {"prompt": content, "image": image}, "depends_on": None}]
             else:
-                steps = [{"tool": tool, "params": {"query": content}, "depends_on": None}]
+                # Default: try RAG + fallback tool
+                steps = [
+                    {"tool": "rag_search", "params": {"query": content}, "depends_on": None},
+                    {"tool": tool, "params": {"query": content}, "depends_on": None},
+                ]
 
         # Execute (skip if chitchat already set tool_results)
         if steps:

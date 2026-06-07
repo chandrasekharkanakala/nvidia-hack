@@ -14,26 +14,64 @@ logger = logging.getLogger(__name__)
 def _extract_content(data) -> str:
     """Extract meaningful content from tool result data, stripping raw metadata."""
     if isinstance(data, dict):
-        # Prefer summary or results fields over dumping the whole dict
         parts = []
+
+        # RAG search results — extract only the text content
+        if data.get("results") and isinstance(data["results"], list):
+            results = data["results"]
+            for item in results[:10]:
+                if isinstance(item, dict):
+                    # Extract actual text content, skip SQL/metadata
+                    text = item.get("text", "")
+                    if text and not text.strip().upper().startswith("SELECT"):
+                        source = item.get("source", "")
+                        parts.append(f"[From {source}]: {text[:300]}")
+                    elif item.get("description"):
+                        parts.append(item["description"][:300])
+                else:
+                    parts.append(str(item)[:200])
+            if parts:
+                return "\n".join(parts)
+
+        # SQL query results — format as a readable table
+        if data.get("rows") and data.get("columns"):
+            cols = data["columns"]
+            rows = data["rows"][:20]
+            header = " | ".join(str(c) for c in cols)
+            row_strs = [" | ".join(str(v) for v in row) for row in rows]
+            table_str = f"{header}\n" + "\n".join(row_strs)
+            if data.get("row_count", 0) > 20:
+                table_str += f"\n... ({data['row_count']} total rows)"
+            return table_str
+
+        # SQL query with no rows but no error — report empty
+        if "rows" in data and not data.get("rows") and not data.get("error"):
+            return "No matching data found in the database."
+
+        # Web scraper / live data
+        if data.get("data") and data.get("source"):
+            source = data["source"]
+            live_data = data["data"]
+            if isinstance(live_data, list):
+                return f"[Live data from {source}]:\n" + "\n".join(str(d)[:200] for d in live_data[:10])
+            elif isinstance(live_data, dict):
+                return f"[Live data from {source}]: {str(live_data)[:500]}"
+
+        # Generic structured results
         if data.get("summary"):
             parts.append(str(data["summary"]))
-        if data.get("results"):
-            results = data["results"]
-            if isinstance(results, list):
-                for item in results[:10]:
-                    parts.append(str(item)[:200])
-            else:
-                parts.append(str(results)[:500])
         if data.get("answer"):
             parts.append(str(data["answer"]))
         if data.get("content"):
             parts.append(str(data["content"]))
-        # Fallback: if no known fields matched, use a cleaned repr
+
+        # Fallback — exclude internal fields
         if not parts:
-            cleaned = {k: v for k, v in data.items() if k not in ("error", "sources") and v}
-            parts.append(str(cleaned)[:500])
-        return "\n".join(parts)
+            exclude_keys = {"error", "sql", "query", "columns", "row_count", "fetched_at", "truncated"}
+            cleaned = {k: v for k, v in data.items() if k not in exclude_keys and v}
+            if cleaned:
+                parts.append(str(cleaned)[:500])
+        return "\n".join(parts) if parts else ""
     elif isinstance(data, list):
         return "\n".join(str(item)[:200] for item in data[:10])
     else:

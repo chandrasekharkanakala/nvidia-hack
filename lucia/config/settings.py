@@ -29,18 +29,18 @@ class Settings(BaseSettings):
     processed_data_dir: str = "./data/processed"
     embeddings_dir: str = "./data/embeddings"
     duckdb_path: str = "./data/lucia.duckdb"
-    faiss_index_path: str = "./data/embeddings/city_data.index"
+    faiss_index_path: str = "./data/embeddings/lucia.faiss"
 
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
     # Agent
-    light_max_steps: int = 1
+    light_max_steps: int = 3
     deep_max_steps: int = 5
     light_temperature: float = 0.3
     deep_temperature: float = 0.7
-    tool_timeout_seconds: int = 10
+    tool_timeout_seconds: int = 30
 
     # FAISS
     embedding_dim: int = 4096

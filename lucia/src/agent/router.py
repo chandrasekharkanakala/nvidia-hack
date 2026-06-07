@@ -25,8 +25,8 @@ _LOOKUP_PATTERNS = (
 )
 
 _REALTIME_PATTERNS = (
-    "current", "right now", "today", "live", "real-time", "status",
-    "disruption", "weather", "forecast today", "tube status",
+    "right now", "live", "real-time", "tube status",
+    "current disruption", "road closure right now",
 )
 
 _VIZ_PATTERNS = (

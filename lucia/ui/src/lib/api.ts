@@ -36,13 +36,3 @@ export async function postSTT(audio: Blob): Promise<string> {
   const data = await res.json();
   return data.text;
 }
-
-export async function postTTS(text: string): Promise<Blob> {
-  const res = await fetch(`${BASE}/voice/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) throw new Error("TTS failed");
-  return res.blob();
-}

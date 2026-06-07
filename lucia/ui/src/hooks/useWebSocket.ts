@@ -1,70 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useChatStore } from "../stores/chatStore";
 import { useMetricsStore } from "../stores/metricsStore";
-import { postTTS } from "../lib/api";
 import { setGlobalWs } from "../lib/wsRef";
-import { useVoiceStore } from "../stores/voiceStore";
 import type { WSIncoming } from "../types";
-
-let activePlayback: { source: AudioBufferSourceNode; context: AudioContext } | null = null;
-
-function stopReplyPlayback() {
-  const playback = activePlayback;
-  activePlayback = null;
-  if (!playback) return;
-
-  playback.source.onended = null;
-  try {
-    playback.source.stop();
-  } catch {
-    // Ignore if source has already ended.
-  }
-
-  void playback.context.close().catch(() => {
-    // Ignore close failures.
-  });
-}
-
-async function speakReply(text: string) {
-  const trimmed = text.trim();
-  if (!trimmed) return;
-
-  const voiceState = useVoiceStore.getState();
-  if (!voiceState.isVoiceEnabled || voiceState.isSpeaking) return;
-
-  voiceState.setSpeaking(true);
-  let audioContext: AudioContext | null = null;
-
-  try {
-    const audioBlob = await postTTS(trimmed);
-    if (!useVoiceStore.getState().isVoiceEnabled) return;
-    audioContext = new AudioContext();
-    const buffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    activePlayback = { source, context: audioContext };
-    voiceState.setStopSpeakingHandler(stopReplyPlayback);
-
-    await new Promise<void>((resolve) => {
-      source.onended = () => resolve();
-      source.start();
-    });
-  } finally {
-    if (activePlayback?.context === audioContext) {
-      activePlayback = null;
-    }
-    voiceState.setStopSpeakingHandler(null);
-    voiceState.setSpeaking(false);
-    if (audioContext) {
-      try {
-        await audioContext.close();
-      } catch {
-        // Ignore close failures; playback has already finished or been interrupted.
-      }
-    }
-  }
-}
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -129,13 +67,6 @@ export function useWebSocket() {
               latency: data.metrics.latencyMs,
               tokens: data.metrics.tokensCompletion,
             });
-            {
-              const messages = useChatStore.getState().messages;
-              const lastMessage = messages[messages.length - 1];
-              void speakReply(lastMessage?.content ?? "").catch((error) => {
-                console.error("[Voice] Failed to play ElevenLabs reply", error);
-              });
-            }
             break;
 
           case "error":
@@ -160,9 +91,6 @@ export function useWebSocket() {
     connect();
 
     return () => {
-      stopReplyPlayback();
-      useVoiceStore.getState().setStopSpeakingHandler(null);
-      useVoiceStore.getState().setSpeaking(false);
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
       setGlobalWs(null);

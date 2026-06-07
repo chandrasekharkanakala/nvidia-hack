@@ -1,12 +1,11 @@
 import { useRef, useCallback } from "react";
 import { useVoiceStore } from "../stores/voiceStore";
-import { postSTT, postTTS } from "../lib/api";
+import { postSTT } from "../lib/api";
 
 export function useVoice() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const { startRecording, stopRecording, setTranscribing, setSpeaking, setTranscript } =
-    useVoiceStore();
+  const { startRecording, stopRecording, setTranscribing, setTranscript } = useVoiceStore();
 
   const start = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -50,22 +49,5 @@ export function useVoice() {
       recorder.stop();
     });
   }, [stopRecording, setTranscribing, setTranscript]);
-
-  const speak = useCallback(async (text: string) => {
-    setSpeaking(true);
-    try {
-      const audioBlob = await postTTS(text);
-      const ctx = new AudioContext();
-      const buffer = await ctx.decodeAudioData(await audioBlob.arrayBuffer());
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.onended = () => setSpeaking(false);
-      source.start();
-    } catch {
-      setSpeaking(false);
-    }
-  }, [setSpeaking]);
-
-  return { start, stop, speak };
+  return { start, stop };
 }

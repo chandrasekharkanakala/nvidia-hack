@@ -82,13 +82,20 @@ def _build_context(tool_results: list[dict]) -> str:
     """Format tool results as numbered sources for citation."""
     sources = []
     idx = 1
+    has_data = False
     for r in tool_results:
         if r["success"] and r["data"] is not None:
             content = _extract_content(r["data"])
             if content.strip():
                 sources.append(f"[{idx}] ({r['tool']}): {content}")
                 idx += 1
-    return "\n\n".join(sources) if sources else "No tool results available."
+                has_data = True
+        elif not r["success"] and r.get("error"):
+            sources.append(f"[Tool error]: {r['error']}")
+
+    if not has_data:
+        return "NO DATA RETRIEVED. The query did not return any results from the database or search index. Tell the user you don't have this specific data and suggest they rephrase their question."
+    return "\n\n".join(sources)
 
 
 async def generate(

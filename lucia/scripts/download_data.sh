@@ -49,6 +49,12 @@ FILENAMES=(
     "mps_crime.csv"
     "fire_incidents.csv"
     "fire_mobilisation.csv"
+    # --- New datasets (June 2026) ---
+    "traffic_flows_borough.xlsx"
+    "licensed_vehicles_borough.xls"
+    "airport_passengers.xlsx"
+    "traffic_counts_brixton_hill.zip"
+    "traffic_counts_streatham_wells.zip"
 )
 
 URLS=(
@@ -72,6 +78,12 @@ URLS=(
     "https://data.london.gov.uk/download/exy3m/276/MPS%20LSOA%20Level%20Crime%20(Historical).csv"
     "https://data.london.gov.uk/download/em8xy/73728cf4-b70e-48e2-9b97-4e4341a2110d/LFB%20Incident%20data%20from%202009%20-%202017.csv"
     "https://data.london.gov.uk/download/24r65/3ff29fb5-3935-41b2-89f1-38571059237e/LFB%20Mobilisation%20data%20from%202021%20-%202024.csv"
+    # --- New datasets (June 2026) ---
+    "https://data.london.gov.uk/download/v8pow/87e880c2-34bd-4d86-8895-e8c5344f358e/traffic-flow-borough.xlsx"
+    "https://data.london.gov.uk/download/2l873/0b604f40-d5c2-4898-adc7-014b46007b9e/vehicles-licensed-type-borough.xls"
+    "https://data.london.gov.uk/download/em8jg/21e66d4f-1efc-44b9-bc7f-20cb183e2bf8/largest-global-airports-passenger-traffic.xlsx"
+    "https://data.london.gov.uk/download/2lwg8/9fba4e98-f6da-4e1d-833e-bfee5057a5d0/Brixton%20Hill%20LTN.zip"
+    "https://data.london.gov.uk/download/2lwg8/b08120d5-6157-4acf-b6e6-b205d862cb39/Streatham%20Wells%20LTN.zip"
 )
 
 DATASET_COUNT=${#FILENAMES[@]}
@@ -165,7 +177,7 @@ done
 # --- Final Summary ---
 log ""
 log "=== Download Summary ==="
-total_files=$(find "$DATA_DIR" -name "*.csv" -type f | wc -l | tr -d ' ')
+total_files=$(find "$DATA_DIR" \( -name "*.csv" -o -name "*.xlsx" -o -name "*.xls" -o -name "*.zip" \) -type f | wc -l | tr -d ' ')
 total_size=$(du -sh "$DATA_DIR" 2>/dev/null | cut -f1)
 log "Files in data/raw: $total_files"
 log "Total size: $total_size"

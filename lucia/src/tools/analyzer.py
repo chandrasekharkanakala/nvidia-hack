@@ -23,7 +23,7 @@ Output ONLY the SQL query, no explanation."""
 
 
 def _get_schema() -> str:
-    """Get table schemas for the analysis prompt."""
+    """Get table schemas with sample data for the analysis prompt."""
     try:
         db_path = settings.duckdb_path if hasattr(settings, "duckdb_path") else "data/lucia.duckdb"
         conn = duckdb.connect(db_path, read_only=True)
@@ -37,7 +37,12 @@ def _get_schema() -> str:
                 cols = conn.execute(f"DESCRIBE {table}").fetchall()
                 col_desc = ", ".join(f"{c[0]} ({c[1]})" for c in cols[:15])
                 row_count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                schema_parts.append(f"  {table} [{row_count} rows]: {col_desc}")
+                sample = conn.execute(f"SELECT * FROM {table} LIMIT 1").fetchone()
+                sample_str = ""
+                if sample:
+                    col_names = [c[0] for c in cols[:15]]
+                    sample_str = " | Example: " + ", ".join(f"{col_names[i]}={sample[i]}" for i in range(min(len(col_names), len(sample), 6)))
+                schema_parts.append(f"  {table} [{row_count} rows]: {col_desc}{sample_str}")
             except Exception:
                 pass
         conn.close()
@@ -88,8 +93,23 @@ async def execute(query: str, analysis_type: str = "auto") -> dict:
             result = conn.execute(sql)
             columns = [desc[0] for desc in result.description]
             rows = [list(row) for row in result.fetchall()]
+        except Exception as sql_err:
+            # SQL failed — try fallback: get data from the most relevant table
+            logger.warning(f"Analyzer SQL failed: {sql_err}, trying fallback")
+            from tools.sql_query import _try_fallback_query
+            fallback = _try_fallback_query(conn, query)
+            if fallback and fallback.get("rows"):
+                columns = fallback["columns"]
+                rows = fallback["rows"]
+                sql = fallback["sql"]
+            else:
+                conn.close()
+                return {"sql": sql, "columns": [], "rows": [], "row_count": 0, "analysis": "", "error": str(sql_err)}
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass
 
         # Generate analysis narrative
         data_summary = f"Query returned {len(rows)} rows with columns: {columns}\n"

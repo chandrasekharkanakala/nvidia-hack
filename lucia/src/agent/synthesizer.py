@@ -16,12 +16,23 @@ def _extract_content(data) -> str:
     if isinstance(data, dict):
         parts = []
 
+        # Analyzer results — prioritize the narrative analysis
+        if data.get("analysis"):
+            parts.append(data["analysis"])
+            # Also include the table data if available
+            if data.get("rows") and data.get("columns"):
+                cols = data["columns"]
+                rows = data["rows"][:10]
+                header = " | ".join(str(c) for c in cols)
+                row_strs = [" | ".join(str(v) for v in row) for row in rows]
+                parts.append(f"\nData:\n{header}\n" + "\n".join(row_strs))
+            return "\n".join(parts)
+
         # RAG search results — extract only the text content
         if data.get("results") and isinstance(data["results"], list):
             results = data["results"]
             for item in results[:10]:
                 if isinstance(item, dict):
-                    # Extract actual text content, skip SQL/metadata
                     text = item.get("text", "")
                     if text and not text.strip().upper().startswith("SELECT"):
                         source = item.get("source", "")
@@ -42,11 +53,14 @@ def _extract_content(data) -> str:
             table_str = f"{header}\n" + "\n".join(row_strs)
             if data.get("row_count", 0) > 20:
                 table_str += f"\n... ({data['row_count']} total rows)"
+            # Include note if present (from fallback)
+            if data.get("note"):
+                table_str = f"{data['note']}\n{table_str}"
             return table_str
 
         # SQL query with no rows but no error — report empty
         if "rows" in data and not data.get("rows") and not data.get("error"):
-            return "No matching data found in the database."
+            return ""
 
         # Web scraper / live data
         if data.get("data") and data.get("source"):
@@ -67,7 +81,7 @@ def _extract_content(data) -> str:
 
         # Fallback — exclude internal fields
         if not parts:
-            exclude_keys = {"error", "sql", "query", "columns", "row_count", "fetched_at", "truncated"}
+            exclude_keys = {"error", "sql", "query", "columns", "row_count", "fetched_at", "truncated", "note"}
             cleaned = {k: v for k, v in data.items() if k not in exclude_keys and v}
             if cleaned:
                 parts.append(str(cleaned)[:500])
@@ -94,7 +108,7 @@ def _build_context(tool_results: list[dict]) -> str:
             sources.append(f"[Tool error]: {r['error']}")
 
     if not has_data:
-        return "NO DATA RETRIEVED. The query did not return any results from the database or search index. Tell the user you don't have this specific data and suggest they rephrase their question."
+        return "Note: The specific query returned limited results. Present any available information from the tool outputs above, or describe what datasets are available on this topic."
     return "\n\n".join(sources)
 
 

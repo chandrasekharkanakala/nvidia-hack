@@ -177,8 +177,13 @@ async def process_message(
             on_token=_on_token,
         )
 
-        # Save assistant message
-        await memory.save_message(session_id, "assistant", response_text, effective_mode)
+        # Save assistant message WITH data context for follow-up consistency
+        # Append a condensed data summary so follow-ups know what was retrieved
+        data_context = _summarize_tool_results(tool_results)
+        save_content = response_text
+        if data_context:
+            save_content = f"{response_text}\n\n[DATA_CONTEXT: {data_context}]"
+        await memory.save_message(session_id, "assistant", save_content, effective_mode)
 
         # Metrics
         total_ms = (time.perf_counter() - start_time) * 1000
@@ -224,3 +229,40 @@ async def _safe_emit(on_event: Callable, event: dict) -> None:
         await on_event(event)
     except Exception:
         pass
+
+
+def _summarize_tool_results(tool_results: list[dict]) -> str:
+    """Create a condensed summary of tool results for memory persistence.
+    
+    This allows follow-up questions to know what data was previously retrieved.
+    """
+    parts = []
+    for r in tool_results:
+        if not r["success"]:
+            continue
+        data = r.get("data")
+        if not data:
+            continue
+        tool = r["tool"]
+
+        if tool == "sql_query" and isinstance(data, dict):
+            if data.get("rows") and data.get("columns"):
+                cols = data["columns"]
+                row_count = data.get("row_count", len(data["rows"]))
+                parts.append(f"SQL queried table with columns [{', '.join(cols[:8])}], returned {row_count} rows")
+                # Include first 3 rows as reference
+                for row in data["rows"][:3]:
+                    parts.append(f"  Row: {dict(zip(cols, row))}")
+        elif tool == "rag_search" and isinstance(data, dict):
+            results = data.get("results", [])
+            if results:
+                sources = set(r.get("source", "") for r in results[:5])
+                parts.append(f"RAG found {len(results)} relevant passages from: {', '.join(sources)}")
+        elif tool == "analyzer" and isinstance(data, dict):
+            if data.get("analysis"):
+                parts.append(f"Analysis: {data['analysis'][:200]}")
+        elif tool == "web_scraper" and isinstance(data, dict):
+            if data.get("source"):
+                parts.append(f"Live data from {data['source']}")
+
+    return "; ".join(parts)[:500] if parts else ""

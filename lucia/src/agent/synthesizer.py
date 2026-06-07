@@ -128,8 +128,8 @@ async def generate(
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    # Include recent history for conversational context
-    for msg in history[-4:]:
+    # Include recent history for conversational context (with data context for follow-ups)
+    for msg in history[-6:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
 
     messages.append({

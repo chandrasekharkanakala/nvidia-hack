@@ -15,6 +15,34 @@ class AgentMode(str, Enum):
     deep = "deep"
 
 
+_GREETING_RESPONSE = """I'm LUCIA, your London city intelligence assistant, running on NVIDIA DGX Spark.
+
+I can help you with:
+• **Query 25+ London datasets** — transport, air quality, housing, crime, planning
+• **Analyze trends** and correlations across boroughs
+• **Real-time updates** — TfL disruptions, tube status, weather
+• **Visualize data** — charts, maps, and comparisons
+• **Simulate scenarios** — traffic changes, pollution impact
+
+Try asking: "Which borough has the highest traffic volume?" or "Compare air quality across central London boroughs"."""
+
+
+def _get_chitchat_response(message: str) -> str:
+    """Return instant pre-built response for greetings/chitchat."""
+    lower = message.lower().strip()
+    if any(w in lower for w in ("who are you", "what are you", "what can you do", "what can you help")):
+        return _GREETING_RESPONSE
+    if any(w in lower for w in ("hello", "hi", "hey", "good morning", "good afternoon", "good evening")):
+        return f"Hello! {_GREETING_RESPONSE}"
+    if any(w in lower for w in ("thanks", "thank you", "cheers")):
+        return "You're welcome! Let me know if you have any other questions about London's data."
+    if any(w in lower for w in ("bye", "goodbye")):
+        return "Goodbye! Feel free to come back anytime you need London data insights."
+    if "how are you" in lower:
+        return "I'm running well on DGX Spark! Ready to help you explore London's urban data. What would you like to know?"
+    return _GREETING_RESPONSE
+
+
 async def process_message(
     content: str,
     session_id: str,
@@ -56,9 +84,20 @@ async def process_message(
 
         # Plan
         if intent in ("chitchat", "greeting"):
-            # No tools needed for greetings/chitchat — go straight to synthesizer
-            steps = []
-            tool_results = []
+            # Instant response — no LLM call needed for greetings
+            response_text = _get_chitchat_response(content)
+            await memory.save_message(session_id, "assistant", response_text, effective_mode)
+            total_ms = (time.perf_counter() - start_time) * 1000
+            if on_event:
+                for i in range(0, len(response_text), 20):
+                    await _safe_emit(on_event, {"type": "token", "content": response_text[i:i+20]})
+                await _safe_emit(on_event, {"type": "done", "metrics": {"total_ms": round(total_ms, 1)}})
+            return {
+                "content": response_text,
+                "mode": effective_mode,
+                "metrics": {"total_ms": round(total_ms, 1), "intent": intent, "steps": 0, "tools_succeeded": 0, "tools_failed": 0},
+                "tool_calls": [],
+            }
         elif effective_mode == "deep":
             # Deep mode: multi-tool pipeline (SQL + RAG + Analyzer)
             # Don't rely on LLM planner — use deterministic multi-step approach

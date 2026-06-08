@@ -2,6 +2,8 @@
 
 > An agentic AI system that runs entirely on NVIDIA DGX Spark. Ask questions about London's traffic, air quality, planning, and city operations — get non-obvious insights, simulations, and predictions.
 
+![LUCIA UI Screenshot](docs/images/lucia-ui.png)
+
 ---
 
 ## Quick Start (DGX Spark)
